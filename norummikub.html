@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Rummikub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at center, #2b5894 0%, #112d59 100%);
+            overscroll-behavior-y: none;
+            touch-action: none;
+            color: white;
+        }
+
+        .tile {
+            width: 44px;
+            height: 64px;
+            background: linear-gradient(to bottom, #fdfdfd 0%, #e6e6e6 100%);
+            border-radius: 4px;
+            box-shadow: 1px 2px 4px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 8px;
+            font-weight: 900;
+            font-size: 26px;
+            cursor: grab;
+            user-select: none;
+            position: absolute;
+            transition: transform 0.1s;
+            border: 1px solid #d1d5db;
+        }
+
+        .tile:after {
+            content: "Rummikub";
+            font-size: 6px;
+            color: rgba(0,0,0,0.1);
+            position: absolute;
+            bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tile:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            z-index: 100 !important;
+            box-shadow: 2px 8px 15px rgba(0,0,0,0.5);
+        }
+
+        .tile.color-red { color: #d92121; }
+        .tile.color-blue { color: #1e5ba8; }
+        .tile.color-black { color: #111111; }
+        .tile.color-yellow { color: #f58216; } /* Orange-ish yellow to match image */
+        
+        .tile.joker {
+            font-size: 28px;
+            color: #111111; /* Default joker color */
+            justify-content: center;
+            padding-top: 0;
+        }
+        
+        .tile.joker:after { display: none; }
+        .tile.joker.color-red { color: #d92121; }
+
+        .tile-number { line-height: 1; }
+
+        #board-area {
+            position: relative;
+            background-size: 46px 66px;
+            background-position: center;
+            border-radius: 8px;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Watermark */
+        .board-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8vw;
+            font-weight: 900;
+            color: rgba(255,255,255,0.03);
+            pointer-events: none;
+            text-align: center;
+            line-height: 1.1;
+        }
+        .board-watermark span {
+            display: block;
+            font-size: 3vw;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        #rack-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 800px;
+            height: 160px;
+            background: linear-gradient(to bottom, #d4a373 0%, #b88655 100%);
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2);
+            border-top: 2px solid #e3b787;
+        }
+        
+        /* The groove for the tiles */
+        #rack-container::before {
+            content: '';
+            position: absolute;
+            top: 75px; /* Middle divider */
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(0,0,0,0.2);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        #player-rack {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .grid-snap {
+            transition: left 0.1s ease, top 0.1s ease;
+        }
+
+        .game-button {
+            background: linear-gradient(to bottom, #395c88 0%, #203f68 100%);
+            border: 1px solid #4a74a5;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .game-button:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.3), inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        .game-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Sidebar Player List */
+        #left-sidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .player-avatar-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .speech-bubble {
+            position: absolute;
+            left: 75px; /* Avatar width + gap */
+            top: 30px; /* Aligned roughly with the center of the avatar */
+            transform: translateY(-50%) scale(0.8);
+            transform-origin: left center;
+            background: rgba(255, 255, 255, 0.95);
+            color: #112d59;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            max-width: 200px;
+            width: max-content;
+            word-wrap: break-word;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 60;
+        }
+
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+            border-right: 6px solid rgba(255, 255, 255, 0.95);
+        }
+
+        .player-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #4a74a5;
+            background-color: #1a365d;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .player-avatar.active-turn {
+            border-color: #4ade80; /* Green highlight for current turn */
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+        }
+
+        .player-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .player-name {
+            font-size: 11px;
+            color: #a0aec0;
+            margin-top: 4px;
+            max-width: 70px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tile-count-badge {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 11px;
+            color: white;
+        }
+        .tile-count-badge svg { width: 10px; height: 10px; fill: currentColor; }
+
+        /* Right Sidebar Controls */
+        #right-sidebar {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .sort-group {
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            padding: 4px;
+        }
+
+        .btn-sort {
+            width: 50px;
+            height: 40px;
+            font-weight: bold;
+            font-size: 16px;
+            border: none;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+        }
+        .btn-sort:first-child { border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .btn-sort:hover { background: rgba(255,255,255,0.05); }
+
+        .btn-draw-large {
+            width: 60px;
+            height: 140px;
+            border-radius: 30px;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px 0;
+            background: linear-gradient(to bottom, #4a6c98 0%, #2a4c78 100%);
+            border: 2px solid #5a7ca8;
+        }
+
+        .btn-draw-large .plus-icon {
+            font-size: 40px;
+            color: #d4a373;
+            line-height: 1;
+        }
+        
+        .btn-draw-large .pool-info {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        #chat-panel {
+            position: absolute;
+            left: 80px;
+            bottom: 20px;
+            width: 320px;
+            height: 400px;
+            background: rgba(17, 45, 89, 0.95);
+            border: 1px solid #395c88;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 50;
+            transform: translateX(-120%);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #chat-panel.open {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .chat-msg {
+            max-width: 85%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .chat-msg.me {
+            align-self: flex-end;
+            background: #2b5894;
+            border-bottom-right-radius: 2px;
+        }
+        .chat-msg.other {
+            align-self: flex-start;
+            background: rgba(0,0,0,0.3);
+            border-bottom-left-radius: 2px;
+        }
+        .chat-sender {
+            font-size: 10px;
+            color: #a0aec0;
+            margin-bottom: 2px;
+        }
+        #chat-input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            gap: 8px;
+        }
+        #chat-input {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid #395c88;
+            color: white;
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 13px;
+            outline: none;
+        }
+        #chat-input:focus { border-color: #4a74a5; }
+        #btn-send-msg {
+            background: #395c88;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        #btn-send-msg:hover { background: #4a74a5; }
+        #chat-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #chat-toggle:hover { background: rgba(0,0,0,0.4); }
+        #chat-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #112d59;
+        }
+
+        /* Header controls */
+        #top-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+        .btn-small:hover { background: rgba(0,0,0,0.5); }
+        
+        .btn-action-primary {
+            background: #22c55e;
+            border-color: #16a34a;
+        }
+        .btn-action-primary:hover { background: #16a34a; }
+
+        .ghost-tile {
+            position: absolute;
+            width: 44px;
+            height: 64px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+        
+        .board-invalid { animation: shake 0.5s; }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .not-my-turn .tile[data-owner="me"] {
+            opacity: 0.8;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .not-my-turn #board-area { pointer-events: none; }
+
+        @media (max-width: 768px) {
+            .tile { width: 34px; height: 50px; font-size: 20px; }
+            .tile.joker { font-size: 22px; }
+            #board-area { background-size: 38px 54px; }
+            .ghost-tile { width: 34px; height: 50px; }
+            #rack-container { height: 120px; }
+            #rack-container::before { top: 55px; }
+            #left-sidebar { width: 60px; gap: 10px; padding-top: 10px; }
+            .player-avatar { width: 40px; height: 40px; }
+            #right-sidebar { right: 10px; }
+            .btn-draw-large { width: 50px; height: 110px; }
+            #chat-panel { left: 65px; bottom: 130px; width: calc(100vw - 80px); max-height: 300px; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col overflow-hidden text-gray-800 relative">
+
+    <!-- Top Controls -->
+    <div id="top-controls" class="hidden">
+        <div id="turn-timer" class="hidden font-mono text-xl font-bold text-yellow-400 px-4 py-1 bg-black/50 rounded border border-white/20 shadow-lg flex items-center justify-center min-w-[60px] transition-colors duration-300">--s</div>
+        <button id="btn-revert" class="btn-small opacity-50 cursor-not-allowed">Revert Move</button>
+        <button id="btn-end-turn" class="btn-small btn-action-primary opacity-50 cursor-not-allowed">End Turn</button>
+        <div id="game-status" class="btn-small" style="background: transparent; border: none;">Connecting...</div>
+    </div>
+
+    <!-- Left Sidebar: Players -->
+    <div id="left-sidebar">
+        <div id="players-list-container" class="flex flex-col items-center gap-5 w-full">
+            <!-- Injected player avatars -->
+        </div>
+        
+        <!-- Chat Toggle Button -->
+        <div class="mt-auto mb-4 relative hidden" id="chat-toggle-container">
+            <button id="chat-toggle">
+                <svg viewBox="0 0 24 24" fill="white" width="20" height="20" opacity="0.8"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+            </button>
+            <div id="chat-badge" class="hidden">0</div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar: Draw & Sort -->
+    <div id="right-sidebar" class="hidden">
+        <div class="sort-group game-button">
+            <button id="btn-sort-run" class="btn-sort">789</button>
+            <button id="btn-sort-group" class="btn-sort">777</button>
+        </div>
+        
+        <button id="btn-draw" class="game-button btn-draw-large opacity-50 cursor-not-allowed">
+            <span class="plus-icon">+</span>
+            <div class="pool-info">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M4 6h16v12H4z" opacity=".3"/><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>
+                <span id="pool-count">0</span>
+            </div>
+        </button>
+    </div>
+
+    <!-- Main Game Area -->
+    <main class="flex-grow flex flex-col relative overflow-hidden w-full h-full">
+        <!-- The Board -->
+        <div id="board-container" class="absolute inset-0 pb-[180px] pl-[90px] pr-[90px] pt-[40px] overflow-hidden">
+            <div id="board-area">
+                <div class="board-watermark">
+                    <span>The Original</span>
+                    Rummikub®
+                </div>
+                <div id="ghost" class="ghost-tile"></div>
+                <!-- Board tiles injected here -->
+            </div>
+        </div>
+
+        <!-- Feedback Messages -->
+        <div id="feedback-msg" class="absolute top-[20%] left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold opacity-0 transition-opacity duration-300 pointer-events-none z-50 text-lg">
+            Invalid move!
+        </div>
+
+        <!-- Player Rack -->
+        <div id="rack-container">
+            <div class="absolute -top-6 left-2 text-white text-xs font-bold bg-green-500 px-2 py-1 rounded hidden shadow-lg z-20" id="has-opened-badge">
+                MELDED
+            </div>
+            <div id="player-rack">
+                <!-- Rack tiles injected here -->
+            </div>
+        </div>
+        
+        <!-- Chat Panel -->
+        <div id="chat-panel">
+            <div class="px-4 py-3 border-b border-white/10 font-bold flex justify-between items-center bg-black/20 rounded-t-xl text-sm">
+                <span>Room Chat</span>
+                <button id="btn-close-chat" class="text-gray-400 hover:text-white">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="chat-messages">
+                <!-- Messages go here -->
+            </div>
+            <div id="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                <button id="btn-send-msg">
+                    <svg viewBox="0 0 24 24" fill="white" width="16" height="16"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-container" class="fixed inset-0 z-[100] flex items-center justify-center modal-overlay">
+        <!-- Profile Setup Modal -->
+        <div id="profile-modal" class="bg-[#1e3a5f] border border-[#395c88] text-white rounded-xl shadow-2xl p-8 w-full max-w-md hidden">
+            <h2 class="text-3xl font-black mb-6 text-center tracking-wide text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400">Set Profile</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-blue-200 mb-2">Nickname</label>
+                <input type="text" id="input-player-name" placeholder="Enter your name" class="w-full bg-[#112d59] border border-[#395c88] text-white rounded-lg px-4 py-3 focus:outline-none focus:border-blue-400" maxlength="10">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-blue-200 mb-2">Choose Avatar (Boys, Girls, Animals)</label>
+                <div id="avatar-grid" class="grid grid-cols-5 gap-3 p-2 bg-[#112d59] border border-[#395c88] rounded-lg">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+            <button id="btn-save-profile" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition transform hover:scale-[1.02]">
+                Continue to Lobby
+            </button>
+        </div>
+
+        <!-- Start/Lobby Modal -->
+        <div id="lobby-modal" class="bg-[#1e3a5f] border border-[#395c88] text-white rounded-xl shadow-2xl p-8 w-full max-w-md hidden">
+            <h2 class="text-3xl font-black mb-6 text-center tracking-wide text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400">Rummikub</h2>
+            
+            <div id="setup-section">
+                <div class="mb-5 bg-[#112d59] p-4 rounded-lg border border-[#395c88]">
+                    <label class="block text-sm font-bold text-blue-200 mb-2">Turn Time Limit</label>
+                    <select id="time-limit-select" class="w-full bg-[#1e3a5f] border border-[#395c88] text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
+                        <option value="0">No Limit</option>
+                        <option value="15">15 Seconds</option>
+                        <option value="30">30 Seconds</option>
+                        <option value="60" selected>60 Seconds</option>
+                    </select>
+                </div>
+                <button id="btn-new-game" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg mb-4 shadow-lg transition transform hover:scale-[1.02]">
+                    Create Private Room
+                </button>
+                <div class="flex items-center gap-3 mb-4 opacity-50">
+                    <hr class="flex-grow border-white"><span class="text-xs uppercase tracking-widest">or</span><hr class="flex-grow border-white">
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="input-game-id" placeholder="Enter Room Code" class="flex-grow bg-[#112d59] border border-[#395c88] text-white rounded-lg px-4 py-3 uppercase focus:outline-none focus:border-blue-400">
+                    <button id="btn-join-game" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition">Join</button>
+                </div>
+            </div>
+
+            <div id="waiting-section" class="hidden flex flex-col items-center">
+                <h3 class="text-xl font-bold mb-2">Room Lobby</h3>
+                <p class="text-sm text-blue-200 mb-4">Share this code with friends</p>
+                <div class="flex items-center gap-3 bg-[#112d59] border border-[#395c88] p-3 rounded-lg w-full justify-center mb-6">
+                    <span id="display-game-id" class="font-mono text-3xl font-black tracking-widest text-white">---</span>
+                    <button id="btn-copy-id" class="text-blue-400 hover:text-white bg-blue-900/50 p-2 rounded" title="Copy to clipboard">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="w-full mb-6">
+                    <h4 class="text-sm font-semibold text-blue-300 mb-2 uppercase tracking-wide">Players</h4>
+                    <ul id="lobby-players-list" class="bg-[#112d59] rounded-lg p-2 text-sm min-h-[100px] flex flex-col gap-2">
+                        <!-- List populates here -->
+                    </ul>
+                </div>
+                
+                <button id="btn-start-playing" class="w-full bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition opacity-50 cursor-not-allowed">
+                    Start Game
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="game-over-modal" class="bg-[#1e3a5f] border border-[#395c88] text-white rounded-xl shadow-2xl p-8 w-full max-w-sm hidden text-center">
+            <h2 class="text-4xl font-black mb-2 text-yellow-400 drop-shadow-md">Rummikub!</h2>
+            <p id="winner-text" class="text-xl font-bold mb-6 text-blue-100">Player X wins!</p>
+            <div id="scores-container" class="mb-6 text-left bg-[#112d59] p-4 rounded-lg flex flex-col gap-3">
+                <!-- Scores injected here -->
+            </div>
+            <button id="btn-back-lobby" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg">
+                Play Again
+            </button>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="hidden">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = 'rummi'
+        const firebaseConfig = {
+          apiKey: "AIzaSyAErVMUePGOBVS4EWpLuUbUiivb9ZbSdYc",
+          authDomain: "norummikub.firebaseapp.com",
+          projectId: "norummikub",
+          storageBucket: "norummikub.firebasestorage.app",
+          messagingSenderId: "211723475103",
+          appId: "1:211723475103:web:793bb0e7a6ca099a8eeaaa"
+        };
+
+        
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase init failed", e);
+        }
+
+        const COLORS = ['red', 'blue', 'black', 'yellow'];
+        const TILE_WIDTH = window.innerWidth > 768 ? 44 : 34;
+        const TILE_HEIGHT = window.innerWidth > 768 ? 64 : 50;
+        const SNAP_GRID = window.innerWidth > 768 ? {x: 48, y: 68} : {x: 38, y: 54};
+        
+        let currentUser = null;
+        let currentGameId = null;
+        let unsubscribeGame = null;
+        
+        let gameState = {
+            status: 'lobby',
+            players: {},
+            playerOrder: [],
+            currentTurnIndex: 0,
+            pool: [],
+            board: [],
+            winner: null,
+            messages: []
+        };
+        
+        let myRack = [];
+        let initialBoardSnapshot = [];
+        let initialRackSnapshot = [];
+        let hasManipulatedBoard = false;
+        let draggedTile = null;
+        let dragOffset = {x: 0, y: 0};
+        
+        // Chat state
+        let unreadCount = 0;
+        let isChatOpen = false;
+        let lastMessageCount = 0;
+        
+        let turnTimerInterval = null;
+        
+        let myProfile = { name: "", avatarUrl: "" };
+        let selectedAvatarIndex = 0;
+        
+        function createEmojiAvatar(emoji, bgColor) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#${bgColor}"/><text x="50" y="55" font-size="65" text-anchor="middle" dominant-baseline="central">${emoji}</text></svg>`;
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        }
+
+        const AVATAR_OPTIONS = [
+            // Men (5) - Cute Micah Style
+            'https://api.dicebear.com/7.x/micah/svg?seed=Felix&backgroundColor=b6e3f4',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Caleb&backgroundColor=c0aede',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Oliver&backgroundColor=d1d4f9',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Julian&backgroundColor=ffd5dc',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Leo&backgroundColor=ffdfbf',
+            // Women (5) - Cute Micah Style
+            'https://api.dicebear.com/7.x/micah/svg?seed=Mia&backgroundColor=ffd5dc',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Avery&backgroundColor=d1d4f9',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Destiny&backgroundColor=c0aede',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Jocelyn&backgroundColor=ffdfbf',
+            'https://api.dicebear.com/7.x/micah/svg?seed=Leah&backgroundColor=b6e3f4',
+            // Animals (10) - Emojis on pastel backgrounds
+            createEmojiAvatar('🐶', 'ffb3ba'),
+            createEmojiAvatar('🐱', 'ffdfba'),
+            createEmojiAvatar('🐭', 'ffffba'),
+            createEmojiAvatar('🐹', 'baffc9'),
+            createEmojiAvatar('🐰', 'bae1ff'),
+            createEmojiAvatar('🦊', 'ffb3ba'),
+            createEmojiAvatar('🐻', 'ffdfba'),
+            createEmojiAvatar('🐼', 'ffffba'),
+            createEmojiAvatar('🐨', 'baffc9'),
+            createEmojiAvatar('🐯', 'bae1ff')
+        ];
+        
+        const UI = {
+            modalContainer: document.getElementById('modal-container'),
+            profileModal: document.getElementById('profile-modal'),
+            inputPlayerName: document.getElementById('input-player-name'),
+            avatarGrid: document.getElementById('avatar-grid'),
+            btnSaveProfile: document.getElementById('btn-save-profile'),
+            lobbyModal: document.getElementById('lobby-modal'),
+            setupSection: document.getElementById('setup-section'),
+            timeLimitSelect: document.getElementById('time-limit-select'),
+            turnTimer: document.getElementById('turn-timer'),
+            waitingSection: document.getElementById('waiting-section'),
+            gameOverModal: document.getElementById('game-over-modal'),
+            loadingSpinner: document.getElementById('loading-spinner'),
+            
+            topControls: document.getElementById('top-controls'),
+            rightSidebar: document.getElementById('right-sidebar'),
+            leftSidebar: document.getElementById('left-sidebar'),
+            playersListContainer: document.getElementById('players-list-container'),
+            
+            chatToggleContainer: document.getElementById('chat-toggle-container'),
+            chatToggle: document.getElementById('chat-toggle'),
+            chatBadge: document.getElementById('chat-badge'),
+            chatPanel: document.getElementById('chat-panel'),
+            btnCloseChat: document.getElementById('btn-close-chat'),
+            chatMessages: document.getElementById('chat-messages'),
+            chatInput: document.getElementById('chat-input'),
+            btnSendMsg: document.getElementById('btn-send-msg'),
+            
+            gameStatus: document.getElementById('game-status'),
+            poolCount: document.getElementById('pool-count'),
+            boardArea: document.getElementById('board-area'),
+            playerRack: document.getElementById('player-rack'),
+            ghost: document.getElementById('ghost'),
+            feedbackMsg: document.getElementById('feedback-msg'),
+            hasOpenedBadge: document.getElementById('has-opened-badge'),
+            
+            btnDraw: document.getElementById('btn-draw'),
+            btnRevert: document.getElementById('btn-revert'),
+            btnEndTurn: document.getElementById('btn-end-turn'),
+            btnSortRun: document.getElementById('btn-sort-run'),
+            btnSortGroup: document.getElementById('btn-sort-group'),
+            
+            btnNewGame: document.getElementById('btn-new-game'),
+            btnJoinGame: document.getElementById('btn-join-game'),
+            inputGameId: document.getElementById('input-game-id'),
+            displayGameId: document.getElementById('display-game-id'),
+            btnCopyId: document.getElementById('btn-copy-id'),
+            lobbyPlayersList: document.getElementById('lobby-players-list'),
+            btnStartPlaying: document.getElementById('btn-start-playing'),
+            
+            winnerText: document.getElementById('winner-text'),
+            scoresContainer: document.getElementById('scores-container'),
+            btnBackLobby: document.getElementById('btn-back-lobby')
+        };
+
+        function showLoading() { UI.loadingSpinner.classList.remove('hidden'); }
+        function hideLoading() { UI.loadingSpinner.classList.add('hidden'); }
+        
+        function showMessage(msg, isError = true) {
+            UI.feedbackMsg.textContent = msg;
+            UI.feedbackMsg.className = `absolute top-[20%] left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl font-bold transition-opacity duration-300 pointer-events-none z-50 text-lg ${isError ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`;
+            UI.feedbackMsg.style.opacity = '1';
+            setTimeout(() => { UI.feedbackMsg.style.opacity = '0'; }, 3000);
+        }
+
+        async function initAuth() {
+            if (!auth) return;
+            try {
+                if (typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                currentUser = auth.currentUser;
+                UI.gameStatus.textContent = "Ready";
+                setupProfileUI();
+            } catch (error) {
+                console.error("Auth error:", error);
+                UI.gameStatus.textContent = "Auth Failed";
+            }
+        }
+
+        function setupProfileUI() {
+            UI.profileModal.classList.remove('hidden');
+            UI.avatarGrid.innerHTML = '';
+            
+            AVATAR_OPTIONS.forEach((url, idx) => {
+                const div = document.createElement('div');
+                div.className = `w-12 h-12 rounded-full overflow-hidden border-2 cursor-pointer transition ${idx === selectedAvatarIndex ? 'border-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)] transform scale-110' : 'border-transparent hover:border-blue-300'}`;
+                div.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+                div.onclick = () => {
+                    selectedAvatarIndex = idx;
+                    document.querySelectorAll('#avatar-grid > div').forEach((el, i) => {
+                        if(i === idx) el.className = `w-12 h-12 rounded-full overflow-hidden border-2 cursor-pointer transition border-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)] transform scale-110`;
+                        else el.className = `w-12 h-12 rounded-full overflow-hidden border-2 cursor-pointer transition border-transparent hover:border-blue-300`;
+                    });
+                };
+                UI.avatarGrid.appendChild(div);
+            });
+            
+            UI.btnSaveProfile.onclick = () => {
+                const name = UI.inputPlayerName.value.trim();
+                if(!name) { showMessage("Please enter your nickname!"); return; }
+                myProfile.name = name;
+                myProfile.avatarUrl = AVATAR_OPTIONS[selectedAvatarIndex];
+                
+                UI.profileModal.classList.add('hidden');
+                UI.lobbyModal.classList.remove('hidden');
+            };
+        }
+
+        function generateShortId() { return Math.random().toString(36).substring(2, 6).toUpperCase(); }
+
+        function generateDeck() {
+            let deck = [];
+            let idCounter = 1;
+            for (let set = 0; set < 2; set++) {
+                for (const color of COLORS) {
+                    for (let num = 1; num <= 13; num++) {
+                        deck.push({ id: `t${idCounter++}`, num, color, isJoker: false });
+                    }
+                }
+            }
+            deck.push({ id: `t${idCounter++}`, num: 0, color: 'red', isJoker: true }); // Red Joker
+            deck.push({ id: `t${idCounter++}`, num: 0, color: 'black', isJoker: true }); // Black Joker
+            
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            return deck;
+        }
+        
+        function getGameRef(gameId) { return doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId); }
+        function getPlayerSecretRef(gameId, userId) { return doc(db, 'artifacts', appId, 'users', userId, `game_${gameId}_rack`, 'data'); }
+
+        async function createNewGame() {
+            if (!currentUser) return;
+            showLoading();
+            currentGameId = generateShortId();
+            
+            const selectedTimeLimit = parseInt(UI.timeLimitSelect.value) || 0;
+            
+            const newGameState = {
+                status: 'lobby',
+                turnTimeLimit: selectedTimeLimit,
+                turnStartTime: 0,
+                players: {
+                    [currentUser.uid]: { name: myProfile.name, rackSize: 0, hasOpened: false, avatarUrl: myProfile.avatarUrl }
+                },
+                playerOrder: [currentUser.uid],
+                currentTurnIndex: 0,
+                pool: [],
+                board: [],
+                winner: null,
+                messages: []
+            };
+
+            try {
+                await setDoc(getGameRef(currentGameId), newGameState);
+                joinGameLobbyUI(currentGameId);
+            } catch (e) {
+                showMessage("Failed to create game.");
+            } finally { hideLoading(); }
+        }
+
+        async function joinGame(gameId) {
+            if (!currentUser) return;
+            if (!gameId) { showMessage("Enter Room Code"); return; }
+            
+            showLoading();
+            try {
+                const gameRef = getGameRef(gameId);
+                const docSnap = await getDoc(gameRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.status !== 'lobby') {
+                        showMessage("Game started or finished.");
+                        hideLoading(); return;
+                    }
+                    
+                    if (!data.players[currentUser.uid]) {
+                        const newPlayerNum = Object.keys(data.players).length + 1;
+                        if(newPlayerNum > 4) { showMessage("Room is full."); hideLoading(); return; }
+                        
+                        data.players[currentUser.uid] = { 
+                            name: myProfile.name, 
+                            rackSize: 0, 
+                            hasOpened: false,
+                            avatarUrl: myProfile.avatarUrl
+                        };
+                        data.playerOrder.push(currentUser.uid);
+                        await updateDoc(gameRef, { players: data.players, playerOrder: data.playerOrder });
+                    }
+                    currentGameId = gameId;
+                    joinGameLobbyUI(currentGameId);
+                } else { showMessage("Room not found."); }
+            } catch (e) {
+                showMessage("Failed to join.");
+            } finally { hideLoading(); }
+        }
+
+        function joinGameLobbyUI(gameId) {
+            UI.setupSection.classList.add('hidden');
+            UI.waitingSection.classList.remove('hidden');
+            UI.displayGameId.textContent = gameId;
+            
+            if (unsubscribeGame) unsubscribeGame();
+            unsubscribeGame = onSnapshot(getGameRef(gameId), (docSnap) => {
+                if (docSnap.exists()) {
+                    gameState = docSnap.data();
+                    updateLobbyUI();
+                    
+                    if (gameState.messages) {
+                        renderChat(gameState.messages);
+                        if (gameState.messages.length > lastMessageCount) {
+                            if (lastMessageCount > 0) { 
+                                if (!isChatOpen) {
+                                    unreadCount += (gameState.messages.length - lastMessageCount);
+                                    updateChatBadge();
+                                }
+                                const newMsgs = gameState.messages.slice(lastMessageCount);
+                                newMsgs.forEach(msg => showSpeechBubble(msg.uid, msg.text));
+                            }
+                        }
+                        lastMessageCount = gameState.messages.length;
+                    }
+                    
+                    if (gameState.status === 'playing') startGameSession();
+                }
+            });
+        }
+
+        function updateLobbyUI() {
+            UI.lobbyPlayersList.innerHTML = '';
+            const isHost = gameState.playerOrder[0] === currentUser.uid;
+            
+            gameState.playerOrder.forEach((uid, idx) => {
+                const p = gameState.players[uid];
+                const li = document.createElement('li');
+                li.className = "py-2 px-3 bg-[#1e3a5f] rounded flex items-center gap-3";
+                li.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xs font-bold overflow-hidden border-2 border-blue-300">
+                        <img src="${p.avatarUrl}" alt="avatar" class="w-full h-full object-cover">
+                    </div>
+                    <span class="font-semibold text-white">${escapeHTML(p.name)} ${uid === currentUser.uid ? '<span class="text-blue-300 text-xs">(You)</span>' : ''}</span>
+                `;
+                UI.lobbyPlayersList.appendChild(li);
+            });
+            
+            if (isHost) {
+                UI.btnStartPlaying.classList.remove('opacity-50', 'cursor-not-allowed');
+                UI.btnStartPlaying.textContent = gameState.playerOrder.length >= 2 ? "Start Game" : "Start (Need 2+)";
+                UI.btnStartPlaying.disabled = false; // Allow solo for testing
+            }
+        }
+
+        async function hostStartGame() {
+            if (!currentUser || gameState.playerOrder[0] !== currentUser.uid) return;
+            showLoading();
+            try {
+                let deck = generateDeck();
+                let initialUpdates = [];
+                let updatedPlayers = { ...gameState.players };
+                
+                for (const uid of gameState.playerOrder) {
+                    const rack = deck.splice(0, 14);
+                    updatedPlayers[uid].rackSize = 14;
+                    initialUpdates.push(setDoc(getPlayerSecretRef(currentGameId, uid), { tiles: rack }));
+                }
+                
+                await Promise.all(initialUpdates);
+                await updateDoc(getGameRef(currentGameId), {
+                    status: 'playing', pool: deck, players: updatedPlayers, currentTurnIndex: 0, turnStartTime: Date.now()
+                });
+            } catch(e) {
+                showMessage("Error starting game.");
+            } finally { hideLoading(); }
+        }
+
+        async function startGameSession() {
+            UI.modalContainer.classList.add('hidden');
+            UI.topControls.classList.remove('hidden');
+            UI.rightSidebar.classList.remove('hidden');
+            UI.chatToggleContainer.classList.remove('hidden');
+            
+            const secretRef = getPlayerSecretRef(currentGameId, currentUser.uid);
+            try {
+                const docSnap = await getDoc(secretRef);
+                if (docSnap.exists()) {
+                    myRack = docSnap.data().tiles;
+                    positionRackTilesInitial(myRack);
+                }
+            } catch (e) {}
+            
+            renderEverything();
+        }
+
+        function isMyTurn() { return gameState.playerOrder[gameState.currentTurnIndex] === currentUser.uid; }
+
+        function startTurnTimer() {
+            if (turnTimerInterval) clearInterval(turnTimerInterval);
+            
+            if (!gameState.turnTimeLimit || gameState.turnTimeLimit <= 0) {
+                UI.turnTimer.classList.add('hidden');
+                return;
+            }
+            
+            UI.turnTimer.classList.remove('hidden');
+            
+            turnTimerInterval = setInterval(() => {
+                // Ignore timer if game is finished
+                if (gameState.status === 'finished') {
+                    clearInterval(turnTimerInterval);
+                    return;
+                }
+
+                const elapsed = Math.floor((Date.now() - gameState.turnStartTime) / 1000);
+                let remaining = gameState.turnTimeLimit - elapsed;
+                
+                if (remaining <= 0) {
+                    remaining = 0;
+                    clearInterval(turnTimerInterval);
+                    if (isMyTurn()) {
+                        handleTimeOut();
+                    }
+                }
+                
+                UI.turnTimer.textContent = remaining + 's';
+                if (remaining <= 10) {
+                    UI.turnTimer.classList.add('text-red-500');
+                    if (remaining % 2 === 0) UI.turnTimer.classList.add('opacity-50');
+                    else UI.turnTimer.classList.remove('opacity-50');
+                } else {
+                    UI.turnTimer.classList.remove('text-red-500', 'opacity-50');
+                }
+            }, 1000);
+        }
+        
+        async function handleTimeOut() {
+            if (hasManipulatedBoard) {
+                revertTurn();
+            }
+            showMessage("Time's up! Drawing a tile...", true);
+            await performDraw();
+        }
+
+        function updateTurnUI() {
+            const currentTurnUid = gameState.playerOrder[gameState.currentTurnIndex];
+            const myTurn = isMyTurn();
+            
+            startTurnTimer();
+            
+            UI.gameStatus.textContent = myTurn ? "Your Turn!" : `${gameState.players[currentTurnUid].name}'s turn`;
+            UI.gameStatus.className = `btn-small font-bold ${myTurn ? 'bg-green-600 border-green-500 animate-pulse' : 'bg-transparent border-none'}`;
+            
+            UI.poolCount.textContent = gameState.pool.length;
+            
+            if (myTurn) {
+                document.body.classList.remove('not-my-turn');
+                UI.btnEndTurn.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                if (hasManipulatedBoard) {
+                    UI.btnRevert.classList.remove('opacity-50', 'cursor-not-allowed');
+                    UI.btnDraw.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    UI.btnRevert.classList.add('opacity-50', 'cursor-not-allowed');
+                    UI.btnDraw.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            } else {
+                document.body.classList.add('not-my-turn');
+                UI.btnDraw.classList.add('opacity-50', 'cursor-not-allowed');
+                UI.btnRevert.classList.add('opacity-50', 'cursor-not-allowed');
+                UI.btnEndTurn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            
+            if (myTurn && !hasManipulatedBoard) {
+                initialBoardSnapshot = JSON.parse(JSON.stringify(gameState.board));
+                initialRackSnapshot = JSON.parse(JSON.stringify(myRack));
+            }
+            
+            const me = gameState.players[currentUser.uid];
+            if(me && me.hasOpened) {
+                 UI.hasOpenedBadge.classList.remove('hidden');
+            }
+        }
+
+        async function performDraw() {
+            if (!isMyTurn() || hasManipulatedBoard) return;
+            if (gameState.pool.length === 0) { endTurnLogic(true); return; }
+            
+            const newPool = [...gameState.pool];
+            const drawnTile = newPool.pop();
+            myRack.push(drawnTile);
+            positionRackTilesInitial(myRack);
+            
+            const secretRef = getPlayerSecretRef(currentGameId, currentUser.uid);
+            await setDoc(secretRef, { tiles: myRack });
+            
+            let updatedPlayers = {...gameState.players};
+            updatedPlayers[currentUser.uid].rackSize = myRack.length;
+            const nextIdx = (gameState.currentTurnIndex + 1) % gameState.playerOrder.length;
+            
+            await updateDoc(getGameRef(currentGameId), {
+                pool: newPool, players: updatedPlayers, currentTurnIndex: nextIdx, turnStartTime: Date.now()
+            });
+            hasManipulatedBoard = false;
+        }
+
+        function revertTurn() {
+            if (!isMyTurn() || !hasManipulatedBoard) return;
+            gameState.board = JSON.parse(JSON.stringify(initialBoardSnapshot));
+            myRack = JSON.parse(JSON.stringify(initialRackSnapshot));
+            hasManipulatedBoard = false;
+            renderEverything();
+        }
+
+        function getTileSets(boardTiles) {
+            if(boardTiles.length === 0) return [];
+            let sorted = [...boardTiles].sort((a, b) => {
+                if (Math.abs(a.y - b.y) > SNAP_GRID.y / 2) return a.y - b.y;
+                return a.x - b.x;
+            });
+            
+            let sets = [];
+            let currentSet = [sorted[0]];
+            
+            for (let i = 1; i < sorted.length; i++) {
+                let prev = sorted[i-1];
+                let curr = sorted[i];
+                if (Math.abs(prev.y - curr.y) < SNAP_GRID.y / 2 && (curr.x - prev.x) > 0 && (curr.x - prev.x) <= SNAP_GRID.x * 1.5) {
+                    currentSet.push(curr);
+                } else {
+                    sets.push(currentSet);
+                    currentSet = [curr];
+                }
+            }
+            if (currentSet.length > 0) sets.push(currentSet);
+            return sets;
+        }
+
+        function validateSet(set) {
+            if (set.length < 3) return false;
+            let nonJokers = set.filter(t => !t.isJoker);
+            if (nonJokers.length === 0) return true;
+
+            let isGroup = true;
+            let firstNum = nonJokers[0].num;
+            let colorsSeen = new Set();
+            if (set.length > 4) isGroup = false;
+            for (let t of nonJokers) {
+                if (t.num !== firstNum) isGroup = false;
+                if (colorsSeen.has(t.color)) isGroup = false;
+                colorsSeen.add(t.color);
+            }
+            if (isGroup) return true;
+
+            let isRun = true;
+            let runColor = nonJokers[0].color;
+            for(let t of nonJokers) { if(t.color !== runColor) { isRun = false; break; } }
+            
+            if (isRun) {
+                let firstNonJokerIdx = set.findIndex(t => !t.isJoker);
+                let firstVal = set[firstNonJokerIdx].num - firstNonJokerIdx;
+                if (firstVal < 1 || firstVal + set.length - 1 > 13) return false;
+                let cur = firstVal;
+                for(let i=0; i<set.length; i++) {
+                    if(!set[i].isJoker && set[i].num !== cur) return false;
+                    cur++;
+                }
+                return true;
+            }
+            return false;
+        }
+        
+        function getJokerValueInSet(set) {
+            let nonJokers = set.filter(t => !t.isJoker);
+            if(nonJokers.length === 0) return 0;
+            if (nonJokers.every(t => t.num === nonJokers[0].num)) return nonJokers[0].num;
+            let firstIdx = set.findIndex(t => !t.isJoker);
+            let jokerIdx = set.findIndex(t => t.isJoker);
+            return nonJokers[0].num + (jokerIdx - firstIdx);
+        }
+
+        function validateWholeBoard(boardState) {
+            let sets = getTileSets(boardState);
+            let valid = true;
+            let totalPointsPlayedFromHand = 0;
+
+            sets.forEach(set => {
+                if (!validateSet(set)) valid = false;
+                else {
+                    if (isMyTurn() && !gameState.players[currentUser.uid].hasOpened) {
+                        let newTilesInSet = set.filter(t => !initialBoardSnapshot.find(oldT => oldT.id === t.id));
+                        if (newTilesInSet.length === set.length) {
+                            set.forEach(t => {
+                                totalPointsPlayedFromHand += t.isJoker ? getJokerValueInSet(set) : t.num;
+                            });
+                        }
+                    }
+                }
+            });
+            return { valid, totalPointsPlayedFromHand };
+        }
+
+        async function attemptEndTurn() {
+            if (!isMyTurn()) return;
+            if (!hasManipulatedBoard) { showMessage("Make a move or draw a tile."); return; }
+
+            const validation = validateWholeBoard(gameState.board);
+            if (!validation.valid) {
+                UI.boardArea.classList.add('board-invalid');
+                setTimeout(() => UI.boardArea.classList.remove('board-invalid'), 500);
+                showMessage("Invalid sets on board!");
+                return;
+            }
+            
+            let me = gameState.players[currentUser.uid];
+            if (!me.hasOpened) {
+                if (validation.totalPointsPlayedFromHand < 30) {
+                     UI.boardArea.classList.add('board-invalid');
+                     setTimeout(() => UI.boardArea.classList.remove('board-invalid'), 500);
+                     showMessage(`Initial meld < 30 points (${validation.totalPointsPlayedFromHand}). Revert & draw.`);
+                     return;
+                }
+                me.hasOpened = true;
+            }
+            
+            if (myRack.length === 0) { await declareWin(); return; }
+            endTurnLogic();
+        }
+
+        async function endTurnLogic(forcePass = false) {
+             try {
+                showLoading();
+                const secretRef = getPlayerSecretRef(currentGameId, currentUser.uid);
+                await setDoc(secretRef, { tiles: myRack });
+                
+                let updatedPlayers = {...gameState.players};
+                updatedPlayers[currentUser.uid].rackSize = myRack.length;
+                
+                let snappedBoard = gameState.board.map(t => ({
+                    ...t,
+                    x: Math.round(t.x / SNAP_GRID.x) * SNAP_GRID.x,
+                    y: Math.round(t.y / SNAP_GRID.y) * SNAP_GRID.y
+                }));
+                
+                const nextIdx = (gameState.currentTurnIndex + 1) % gameState.playerOrder.length;
+                
+                await updateDoc(getGameRef(currentGameId), {
+                    board: snappedBoard, players: updatedPlayers, currentTurnIndex: nextIdx, turnStartTime: Date.now()
+                });
+                hasManipulatedBoard = false;
+            } catch(e) {
+                showMessage("Error saving move.");
+            } finally { hideLoading(); }
+        }
+
+        async function declareWin() {
+            showLoading();
+            await updateDoc(getGameRef(currentGameId), {
+                status: 'finished', winner: currentUser.uid, board: gameState.board
+            });
+            hideLoading();
+        }
+
+        let zIndexCounter = 100;
+        
+        function getTileHtml(tile, isMine) {
+            let colorClass = tile.color === 'any' ? '' : `color-${tile.color}`;
+            let content = tile.isJoker ? `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="mb-1"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>` : `<span class="tile-number">${tile.num}</span>`;
+
+            return `
+                <div id="${tile.id}" class="tile ${colorClass} ${tile.isJoker?'joker':''} ${!isMine ? 'shadow-none' : ''}" 
+                     data-id="${tile.id}" data-owner="${isMine ? 'me' : 'board'}"
+                     style="left: ${tile.x || 0}px; top: ${tile.y || 0}px; z-index: ${tile.z || 1}">
+                    ${content}
+                </div>
+            `;
+        }
+
+        function positionRackTilesInitial(rackArray) {
+            const rackEl = UI.playerRack;
+            const rackRect = rackEl.getBoundingClientRect();
+            let row1Y = 10;
+            let row2Y = TILE_HEIGHT + 20; // Lower row below the groove
+            let currentX = 20;
+            let currentY = row1Y;
+            
+            rackArray.forEach(t => {
+                t.x = currentX;
+                t.y = currentY;
+                currentX += TILE_WIDTH + 4;
+                if (currentX + TILE_WIDTH > rackRect.width - 20) {
+                    currentX = 20;
+                    currentY = currentY === row1Y ? row2Y : row1Y; // Try to wrap to next row, naive approach
+                }
+            });
+        }
+
+        function renderEverything() {
+            renderSidebarPlayers();
+            renderBoard();
+            renderRack();
+            updateTurnUI();
+            if(gameState.status === 'finished') showGameOver();
+        }
+        
+        let bubbleTimers = {};
+
+        function showSpeechBubble(uid, text) {
+            const container = document.getElementById(`player-container-${uid}`);
+            if (!container) return;
+
+            // Remove existing bubble if the user sends multiple messages quickly
+            let existingBubble = container.querySelector('.speech-bubble');
+            if (existingBubble) {
+                existingBubble.remove();
+                clearTimeout(bubbleTimers[uid]);
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = 'speech-bubble';
+            bubble.textContent = text;
+            container.appendChild(bubble);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                bubble.style.opacity = '1';
+                bubble.style.transform = 'translateY(-50%) scale(1)';
+            });
+
+            // Disappear after 4 seconds
+            bubbleTimers[uid] = setTimeout(() => {
+                if(bubble.parentElement) {
+                    bubble.style.opacity = '0';
+                    bubble.style.transform = 'translateY(-50%) scale(0.8)';
+                    setTimeout(() => { if(bubble.parentElement) bubble.remove(); }, 200);
+                }
+            }, 4000);
+        }
+
+        function renderSidebarPlayers() {
+            UI.playersListContainer.innerHTML = '';
+            gameState.playerOrder.forEach((uid, index) => {
+                const p = gameState.players[uid];
+                const isTheirTurn = gameState.playerOrder[gameState.currentTurnIndex] === uid;
+                
+                const div = document.createElement('div');
+                div.className = `player-avatar-container`;
+                div.id = `player-container-${uid}`;
+                div.innerHTML = `
+                    <div class="player-avatar ${isTheirTurn ? 'active-turn' : ''} bg-white">
+                         <img src="${p.avatarUrl}" alt="${escapeHTML(p.name)}">
+                    </div>
+                    <span class="player-name">${escapeHTML(p.name)}</span>
+                    <div class="tile-count-badge">
+                        <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z" opacity=".3"/><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>
+                        ${p.rackSize}
+                    </div>
+                `;
+                UI.playersListContainer.appendChild(div);
+            });
+        }
+
+        function updateChatBadge() {
+            if (unreadCount > 0 && !isChatOpen) {
+                UI.chatBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                UI.chatBadge.classList.remove('hidden');
+            } else {
+                UI.chatBadge.classList.add('hidden');
+                unreadCount = 0;
+            }
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
+
+        function renderChat(messages) {
+            UI.chatMessages.innerHTML = '';
+            messages.forEach(msg => {
+                const isMe = msg.uid === currentUser.uid;
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `chat-msg ${isMe ? 'me' : 'other'}`;
+                msgDiv.innerHTML = `
+                    ${!isMe ? `<div class="chat-sender">${escapeHTML(msg.name)}</div>` : ''}
+                    <div>${escapeHTML(msg.text)}</div>
+                `;
+                UI.chatMessages.appendChild(msgDiv);
+            });
+            UI.chatMessages.scrollTop = UI.chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = UI.chatInput.value.trim();
+            if (!text || !currentUser || !currentGameId) return;
+            
+            UI.chatInput.value = '';
+            const me = gameState.players[currentUser.uid];
+            const newMsg = {
+                uid: currentUser.uid,
+                name: me ? me.name : 'Unknown',
+                text: text,
+                timestamp: Date.now()
+            };
+            
+            try {
+                const currentMsgs = gameState.messages || [];
+                await updateDoc(getGameRef(currentGameId), {
+                    messages: [...currentMsgs, newMsg]
+                });
+            } catch (e) {
+                console.error("Failed to send message", e);
+            }
+        }
+
+        function renderBoard() {
+            const watermarkHtml = UI.boardArea.querySelector('.board-watermark').outerHTML;
+            const ghostHtml = UI.ghost.outerHTML;
+            
+            let html = watermarkHtml + ghostHtml;
+            gameState.board.forEach(t => html += getTileHtml(t, true));
+            UI.boardArea.innerHTML = html;
+            
+            UI.ghost = document.getElementById('ghost');
+            bindDragEvents(UI.boardArea);
+        }
+
+        function renderRack() {
+            let html = '';
+            myRack.forEach(t => html += getTileHtml(t, true));
+            UI.playerRack.innerHTML = html;
+            bindDragEvents(UI.playerRack);
+        }
+        
+        function showGameOver() {
+            UI.modalContainer.classList.remove('hidden');
+            UI.gameOverModal.classList.remove('hidden');
+            
+            let winnerName = gameState.players[gameState.winner]?.name || "Someone";
+            UI.winnerText.textContent = `${winnerName} called Rummikub!`;
+            
+            UI.scoresContainer.innerHTML = '';
+            gameState.playerOrder.forEach(uid => {
+                const p = gameState.players[uid];
+                UI.scoresContainer.innerHTML += `
+                    <div class="flex justify-between items-center bg-[#1e3a5f] p-2 rounded border border-[#395c88]">
+                        <span class="font-bold">${p.name}</span>
+                        <span class="${uid === gameState.winner ? 'text-green-400' : 'text-gray-400'}">${uid === gameState.winner ? 'Winner' : p.rackSize + ' left'}</span>
+                    </div>`;
+            });
+        }
+
+        function bindDragEvents(container) {
+            const tiles = container.querySelectorAll('.tile');
+            tiles.forEach(tileEl => {
+                tileEl.onmousedown = handleDragStart;
+                tileEl.ontouchstart = handleDragStart;
+            });
+        }
+        
+        function handleDragStart(e) {
+            if (!isMyTurn()) return;
+            const tileEl = e.currentTarget;
+            const tileId = tileEl.dataset.id;
+            
+            draggedTile = myRack.find(t => t.id === tileId);
+            let source = 'rack';
+            
+            if (!draggedTile) {
+                draggedTile = gameState.board.find(t => t.id === tileId);
+                source = 'board';
+                if(!draggedTile) return;
+            }
+            
+            let me = gameState.players[currentUser.uid];
+            if (!me.hasOpened && source === 'board') {
+                 if (initialBoardSnapshot.find(t => t.id === tileId)) {
+                     showMessage("Cannot move board tiles until initial meld.");
+                     return;
+                 }
+            }
+
+            e.preventDefault();
+            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            const rect = tileEl.getBoundingClientRect();
+            dragOffset.x = clientX - rect.left;
+            dragOffset.y = clientY - rect.top;
+            
+            tileEl.style.position = 'fixed';
+            tileEl.style.zIndex = ++zIndexCounter;
+            tileEl.style.left = clientX - dragOffset.x + 'px';
+            tileEl.style.top = clientY - dragOffset.y + 'px';
+            tileEl.classList.remove('grid-snap');
+            document.body.appendChild(tileEl);
+            
+            UI.ghost.style.display = 'block';
+
+            const moveHandler = (moveEvt) => handleDragMove(moveEvt, tileEl, tileId, source);
+            const endHandler = (endEvt) => handleDragEnd(endEvt, tileEl, tileId, source, moveHandler, endHandler);
+
+            document.addEventListener('mousemove', moveHandler, {passive: false});
+            document.addEventListener('touchmove', moveHandler, {passive: false});
+            document.addEventListener('mouseup', endHandler);
+            document.addEventListener('touchend', endHandler);
+        }
+
+        function handleDragMove(e, tileEl, tileId, source) {
+            e.preventDefault();
+            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            tileEl.style.left = clientX - dragOffset.x + 'px';
+            tileEl.style.top = clientY - dragOffset.y + 'px';
+            
+            const boardRect = UI.boardArea.getBoundingClientRect();
+            if (clientX > boardRect.left && clientX < boardRect.right && 
+                clientY > boardRect.top && clientY < boardRect.bottom) {
+                
+                let localX = clientX - boardRect.left - dragOffset.x;
+                let localY = clientY - boardRect.top - dragOffset.y;
+                let snapX = Math.round(localX / SNAP_GRID.x) * SNAP_GRID.x;
+                let snapY = Math.round(localY / SNAP_GRID.y) * SNAP_GRID.y;
+                
+                UI.ghost.style.left = snapX + 'px';
+                UI.ghost.style.top = snapY + 'px';
+                UI.ghost.style.display = 'block';
+            } else {
+                UI.ghost.style.display = 'none';
+            }
+        }
+
+        function handleDragEnd(e, tileEl, tileId, source, moveHandler, endHandler) {
+            document.removeEventListener('mousemove', moveHandler);
+            document.removeEventListener('touchmove', moveHandler);
+            document.removeEventListener('mouseup', endHandler);
+            document.removeEventListener('touchend', endHandler);
+            
+            UI.ghost.style.display = 'none';
+            tileEl.classList.add('grid-snap');
+            
+            let clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            let clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            
+            const boardRect = UI.boardArea.getBoundingClientRect();
+            const rackRect = document.getElementById('rack-container').getBoundingClientRect();
+            
+            let targetArea = 'unknown';
+            if (clientX > boardRect.left && clientX < boardRect.right && clientY > boardRect.top && clientY < boardRect.bottom) targetArea = 'board';
+            else if (clientX > rackRect.left && clientX < rackRect.right && clientY > rackRect.top && clientY < rackRect.bottom) targetArea = 'rack';
+            
+            hasManipulatedBoard = true;
+            updateTurnUI();
+            
+            if (source === 'rack' && targetArea === 'board') {
+                let idx = myRack.findIndex(t => t.id === tileId);
+                let tile = myRack.splice(idx, 1)[0];
+                tile.x = Math.round((clientX - boardRect.left - dragOffset.x) / SNAP_GRID.x) * SNAP_GRID.x;
+                tile.y = Math.round((clientY - boardRect.top - dragOffset.y) / SNAP_GRID.y) * SNAP_GRID.y;
+                gameState.board.push(tile);
+            } else if (source === 'board' && targetArea === 'rack') {
+                let idx = gameState.board.findIndex(t => t.id === tileId);
+                let tile = gameState.board.splice(idx, 1)[0];
+                tile.x = clientX - rackRect.left - dragOffset.x;
+                tile.y = clientY - rackRect.top - dragOffset.y;
+                myRack.push(tile);
+            } else if (source === 'board' && targetArea === 'board') {
+                let tile = gameState.board.find(t => t.id === tileId);
+                tile.x = Math.round((clientX - boardRect.left - dragOffset.x) / SNAP_GRID.x) * SNAP_GRID.x;
+                tile.y = Math.round((clientY - boardRect.top - dragOffset.y) / SNAP_GRID.y) * SNAP_GRID.y;
+            } else if (source === 'rack' && targetArea === 'rack') {
+                let tile = myRack.find(t => t.id === tileId);
+                tile.x = clientX - rackRect.left - dragOffset.x;
+                tile.y = clientY - rackRect.top - dragOffset.y;
+            } else {
+                if(source === 'rack') {
+                     let tile = myRack.find(t => t.id === tileId);
+                     tile.x = 20; tile.y = 10;
+                } else {
+                     let tile = gameState.board.find(t => t.id === tileId);
+                     tile.x = SNAP_GRID.x; tile.y = SNAP_GRID.y;
+                }
+            }
+
+            tileEl.remove(); 
+            renderBoard();
+            renderRack();
+        }
+
+        UI.btnNewGame.addEventListener('click', createNewGame);
+        UI.btnJoinGame.addEventListener('click', () => joinGame(UI.inputGameId.value.trim()));
+        UI.btnStartPlaying.addEventListener('click', hostStartGame);
+        
+        UI.btnCopyId.addEventListener('click', () => {
+            navigator.clipboard.writeText(currentGameId).then(() => {
+                const icon = UI.btnCopyId.innerHTML;
+                UI.btnCopyId.innerHTML = `<span class="text-xs text-green-400 font-bold uppercase">Copied</span>`;
+                setTimeout(() => UI.btnCopyId.innerHTML = icon, 2000);
+            });
+        });
+
+        UI.btnDraw.addEventListener('click', performDraw);
+        UI.btnRevert.addEventListener('click', revertTurn);
+        UI.btnEndTurn.addEventListener('click', attemptEndTurn);
+        
+        UI.btnSortRun.addEventListener('click', () => {
+            myRack.sort((a,b) => a.color.localeCompare(b.color) || a.num - b.num);
+            positionRackTilesInitial(myRack);
+            renderRack();
+        });
+        
+        UI.btnSortGroup.addEventListener('click', () => {
+            myRack.sort((a,b) => a.num - b.num || a.color.localeCompare(b.color));
+            positionRackTilesInitial(myRack);
+            renderRack();
+        });
+
+        UI.chatToggle.addEventListener('click', () => {
+            isChatOpen = !isChatOpen;
+            if (isChatOpen) {
+                UI.chatPanel.classList.add('open');
+                unreadCount = 0;
+                updateChatBadge();
+                setTimeout(() => UI.chatInput.focus(), 300);
+            } else {
+                UI.chatPanel.classList.remove('open');
+            }
+        });
+
+        UI.btnCloseChat.addEventListener('click', () => {
+            isChatOpen = false;
+            UI.chatPanel.classList.remove('open');
+        });
+
+        UI.btnSendMsg.addEventListener('click', sendMessage);
+        UI.chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        UI.btnBackLobby.addEventListener('click', () => window.location.reload());
+
+        initAuth();
+
+    </script>
+</body>
+</html>
