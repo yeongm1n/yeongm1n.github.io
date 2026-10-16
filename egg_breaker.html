@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>알 뿌수기 - 무엇이 태어날까?</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Google Fonts: Black Han Sans & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <!-- Tone.js for Native Audio Synthesis -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .font-impact {
+      font-family: 'Black Han Sans', sans-serif;
+      letter-spacing: 0.05em;
+    }
+
+    /* Radial gradient Egg shape */
+    .egg-shape {
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      background: radial-gradient(circle at 35% 28%, #ffffff 0%, #fff7e6 30%, #f6deb3 70%, #d8ae78 100%);
+      box-shadow: 
+        inset -12px -18px 30px rgba(110, 60, 15, 0.35),
+        inset 10px 12px 25px rgba(255, 255, 255, 0.95),
+        0 25px 50px -10px rgba(0, 0, 0, 0.6),
+        0 0 35px rgba(245, 158, 11, 0.15);
+      transition: transform 0.05s ease-out;
+    }
+
+    /* Screen shake when powerful attacks land */
+    .shake-screen {
+      animation: screenShake 0.12s ease-in-out;
+    }
+
+    @keyframes screenShake {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(-3px, 4px) rotate(-0.5deg); }
+      50% { transform: translate(4px, -3px) rotate(0.5deg); }
+      75% { transform: translate(-2px, -2px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    /* Egg deformation on hit */
+    .egg-hit {
+      animation: eggSquish 0.08s ease-in-out;
+    }
+
+    @keyframes eggSquish {
+      0% { transform: scale(1, 1); }
+      50% { transform: scale(1.06, 0.92) translateY(8px); }
+      100% { transform: scale(1, 1); }
+    }
+
+    /* Attacking Hero Motion */
+    .attacker-punch {
+      animation: punchMotion 0.1s cubic-bezier(0.1, 0.9, 0.2, 1);
+    }
+
+    @keyframes punchMotion {
+      0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+      50% { transform: translate(32px, -12px) rotate(18deg) scale(1.25); }
+      100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    }
+
+    /* Floating hit numbers and gold notifications */
+    .float-text {
+      position: absolute;
+      pointer-events: none;
+      animation: floatUp 0.75s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+      font-weight: 900;
+      z-index: 40;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(0, 0) scale(1); }
+      40% { opacity: 1; transform: translate(0, -32px) scale(1.35); }
+      100% { opacity: 0; transform: translate(0, -70px) scale(1); }
+    }
+
+    /* Golden birth aura animation for ending */
+    .born-aura {
+      animation: birthAura 1.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes birthAura {
+      from { filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.7)); transform: scale(0.98); }
+      to { filter: drop-shadow(0 0 45px rgba(251, 191, 36, 1)); transform: scale(1.06); }
+    }
+
+    /* Scrollbar styling for shop modal */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(245, 158, 11, 0.4);
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-amber-500 selection:text-black">
+
+  <!-- Top Navigation & Metrics Bar -->
+  <header class="w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-3 sticky top-0 z-30 shadow-lg">
+    <div class="max-w-xl mx-auto flex items-center justify-between">
+      <!-- Title Badge -->
+      <div class="flex items-center space-x-2">
+        <span class="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 shadow-md">
+          <i class="fa-solid fa-egg text-lg"></i>
+        </span>
+        <div>
+          <h1 class="font-impact text-base sm:text-lg text-amber-400 tracking-wide leading-none">알 뿌수기 게임</h1>
+          <span class="text-[10px] text-slate-400 font-semibold">10,000번 두드려 깨우기</span>
+        </div>
+      </div>
+
+      <!-- Money & Sound Tracker -->
+      <div class="flex items-center space-x-3">
+        <!-- Gold Balance -->
+        <div class="flex items-center space-x-1.5 bg-slate-800/90 border border-amber-500/30 px-3 py-1.5 rounded-full shadow-inner">
+          <i class="fa-solid fa-coins text-amber-400 text-sm"></i>
+          <span id="gold-display" class="font-impact text-amber-300 text-sm sm:text-base">0</span>
+          <span class="text-[11px] text-amber-400/80 font-bold">원</span>
+        </div>
+
+        <!-- Mute / Unmute Button -->
+        <button id="sound-btn" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-90 border border-slate-700 flex items-center justify-center text-slate-300 transition" title="사운드 온/오프">
+          <i id="sound-icon" class="fa-solid fa-volume-high text-xs"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col items-center justify-center px-4 py-6 relative overflow-hidden">
+    
+    <!-- Background atmospheric glows -->
+    <div class="absolute w-96 h-96 bg-amber-600/10 rounded-full blur-3xl pointer-events-none -top-20 -left-20"></div>
+    <div class="absolute w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -bottom-20 -right-20"></div>
+
+    <!-- Target Info Status Header (내구도 비공개란 제거됨) -->
+    <div class="text-center mb-5 z-10">
+      <div class="inline-flex items-center space-x-2 bg-slate-900/80 border border-slate-700/80 px-4 py-1.5 rounded-full shadow-md">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+        <span class="text-xs text-slate-300">총 데미지: <span id="total-damage-display" class="font-impact text-amber-400 text-sm">0</span> DMG</span>
+      </div>
+      <p id="egg-status-text" class="text-xs text-slate-400 mt-2 font-medium">알이 굳게 닫혀있습니다. 무엇이 태어날지 두드려보세요!</p>
+    </div>
+
+    <!-- Arena Target & Attacker Canvas -->
+    <div class="relative flex items-center justify-center w-full max-w-md h-80 z-10 select-none">
+
+      <!-- Hero Attacking Hand / Weapon (Left side) -->
+      <div id="character-wrapper" class="absolute left-3 sm:left-8 bottom-10 flex flex-col items-center z-20 pointer-events-none transition-transform">
+        <div id="character-hand" class="relative text-5xl sm:text-6xl text-amber-400 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] filter">
+          <span id="weapon-icon"><i class="fa-solid fa-hand-fist"></i></span>
+        </div>
+        <div class="mt-2 px-2.5 py-0.5 rounded-md bg-slate-900/90 text-[11px] font-black text-amber-400 border border-amber-500/40 shadow-lg">
+          <span id="equipped-name">단련된 맨손</span>
+        </div>
+      </div>
+
+      <!-- Center Clickable Target Egg -->
+      <div id="egg-container" class="relative cursor-pointer select-none active:scale-95 transition-transform duration-75">
+        
+        <!-- Egg Core Body -->
+        <div id="egg" class="egg-shape w-48 h-64 sm:w-56 sm:h-72 flex flex-col items-center justify-center p-4 relative shadow-2xl overflow-hidden">
+          
+          <!-- Gloss highlight -->
+          <div class="absolute top-4 left-6 w-12 h-24 bg-white/45 rounded-full rotate-[-28deg] blur-[2px] pointer-events-none"></div>
+          
+          <!-- SVG Dynamic Crack Line Layer -->
+          <svg id="crack-svg" class="absolute inset-0 w-full h-full pointer-events-none z-10 opacity-75" viewBox="0 0 200 260">
+            <!-- Dynamic crack lines injected via JavaScript -->
+          </svg>
+
+          <!-- Inscription on Egg Surface: "무엇이 태어날까?" -->
+          <div class="z-20 text-center pointer-events-none px-2">
+            <span class="font-impact text-xl sm:text-2xl text-slate-900 tracking-wide drop-shadow-sm select-none border-b-2 border-slate-700/60 pb-1 flex items-center justify-center gap-1.5">
+              무엇이 태어날까?
+            </span>
+            <p class="text-[11px] text-amber-950 font-black mt-2 tracking-widest opacity-85 flex items-center justify-center gap-1">
+              <i class="fa-solid fa-question text-xs animate-bounce text-amber-800"></i> WHAT WILL HATCH?
+            </p>
+          </div>
+        </div>
+
+        <!-- Tap Hint Indicator -->
+        <div class="absolute -bottom-7 left-1/2 -translate-x-1/2 text-slate-400 text-xs font-semibold animate-bounce flex items-center gap-1.5 opacity-80 pointer-events-none">
+          <i class="fa-solid fa-hand-pointer text-amber-400"></i> 터치/클릭하여 타격!
+        </div>
+      </div>
+
+      <!-- Floating Text Container Anchor -->
+      <div id="float-container" class="absolute inset-0 pointer-events-none"></div>
+    </div>
+  </main>
+
+  <!-- Footer Controls & Current Weapon Bar -->
+  <footer class="w-full bg-slate-900/95 border-t border-slate-800 p-3 sm:p-4 z-20 shadow-2xl backdrop-blur-md">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+      
+      <!-- Current Weapon Mini Card -->
+      <div class="flex-1 bg-slate-800/80 border border-slate-700/70 rounded-2xl px-3.5 py-2.5 flex items-center space-x-3 shadow-inner">
+        <div id="stat-weapon-badge" class="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-400 text-2xl flex items-center justify-center border border-amber-500/30 shrink-0">
+          <i class="fa-solid fa-hand-fist"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[11px] text-slate-400 font-semibold truncate">현재 장착 무기 효과</div>
+          <div class="text-xs sm:text-sm font-bold text-amber-300">
+            타격당 <span id="current-dmg" class="text-rose-400 font-black">1</span> 대미지 <span class="text-slate-500">|</span> <span id="current-reward" class="text-amber-400 font-black">1</span>원
+          </div>
+        </div>
+      </div>
+
+      <!-- Weapon Shop Trigger Button -->
+      <button id="open-shop-btn" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-impact text-sm sm:text-base flex items-center space-x-2 shadow-lg shadow-amber-500/25 transition">
+        <i class="fa-solid fa-store text-lg"></i>
+        <span>아이템 상점</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Weapon Shop Modal -->
+  <div id="shop-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div id="shop-card" class="bg-slate-900 border border-slate-700/90 rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl flex flex-col max-h-[85vh] relative">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center text-base">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-impact text-amber-400">무기 보급 상점</h2>
+            <p class="text-[11px] text-slate-400 font-medium">강력한 무기를 사면 타격 피해와 획득 골드가 상승합니다</p>
+          </div>
+        </div>
+        <button id="close-shop-btn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-sm transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Shop Balance Status -->
+      <div class="my-3 px-3 py-2 bg-slate-800/80 rounded-xl flex items-center justify-between text-xs border border-slate-700">
+        <span class="text-slate-400 font-medium">보유한 돈</span>
+        <div class="flex items-center space-x-1">
+          <i class="fa-solid fa-coins text-amber-400"></i>
+          <span id="shop-gold-display" class="font-impact text-amber-300 text-sm">0</span>
+          <span class="text-amber-400 font-bold">원</span>
+        </div>
+      </div>
+
+      <!-- Weapons Scrollable List -->
+      <div id="shop-items-container" class="space-y-2.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Hatch Ending Modal ("언론자유"의 탄생) -->
+  <div id="ending-modal" class="fixed inset-0 bg-black/92 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-gradient-to-b from-slate-900 via-slate-900 to-black border-2 border-amber-400 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl relative overflow-hidden">
+      
+      <!-- Halo background glowing lights -->
+      <div class="absolute -top-24 -left-24 w-60 h-60 bg-amber-500/25 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-60 h-60 bg-amber-400/25 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Freedom Dove Emblem with Golden Aura -->
+      <div class="born-aura inline-block mb-3">
+        <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-200 text-slate-950 flex items-center justify-center text-5xl shadow-2xl mx-auto border-4 border-white/70">
+          <i class="fa-solid fa-dove"></i>
+        </div>
+      </div>
+
+      <div class="inline-block px-3 py-1 bg-amber-500/20 border border-amber-400/60 rounded-full text-amber-300 text-xs font-bold tracking-widest uppercase mb-2">
+        Hatched from the Mysterious Egg
+      </div>
+
+      <h2 class="text-3xl font-impact text-amber-400 mb-1 tracking-wide">
+        '언론자유'가 부화했습니다!
+      </h2>
+      <p class="text-amber-200/90 text-xs font-semibold mb-4 tracking-wider">FREEDOM OF THE PRESS IS BORN</p>
+
+      <div class="text-slate-300 text-xs sm:text-sm leading-relaxed mb-6 bg-slate-800/60 p-4 rounded-2xl border border-slate-700/70 text-left space-y-2">
+        <p>
+          단단히 닫혀있던 알 속에 깃든 생명은 바로 침묵을 깨뜨리는 <strong>'언론자유'</strong>였습니다!
+        </p>
+        <p class="text-amber-300/90">
+          10,000번의 집념 어린 두드림 끝에 마침내 단단한 껍질을 깨고 힘찬 날갯짓을 시작합니다.
+        </p>
+      </div>
+      
+      <!-- Statistics summary card -->
+      <div class="bg-slate-800/90 rounded-xl p-3.5 mb-6 border border-slate-700 text-left text-xs space-y-2">
+        <div class="flex justify-between">
+          <span class="text-slate-400">총 입힌 데미지:</span>
+          <span id="end-total-damage" class="font-bold text-white">10,000 DMG</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">모은 총 보상금:</span>
+          <span id="end-total-gold" class="font-bold text-amber-400">0 원</span>
+        </div>
+      </div>
+
+      <!-- Entry / Application Section (응모하기 폼) -->
+      <div id="entry-form-container" class="text-left bg-slate-900/90 border border-amber-500/40 rounded-2xl p-4 sm:p-5 mb-4 shadow-inner">
+        <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-800">
+          <span class="w-6 h-6 rounded-md bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-bold">
+            <i class="fa-solid fa-gift"></i>
+          </span>
+          <h3 class="font-impact text-amber-400 text-sm sm:text-base">언론자유 부화 기념 이벤트 응모</h3>
+        </div>
+
+        <form id="entry-form" class="space-y-3 text-xs" onsubmit="event.preventDefault(); submitEntry();">
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">성명 <span class="text-rose-400">*</span></label>
+            <input type="text" id="entry-name" required placeholder="홍길동" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition" />
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">지부 <span class="text-rose-400">*</span></label>
+            <input type="text" id="entry-org" required placeholder="소속된 지부명" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition" />
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">전화번호 <span class="text-rose-400">*</span></label>
+            <input type="tel" id="entry-phone" required placeholder="010-1234-5678" pattern="[0-9]{2,3}-?[0-9]{3,4}-?[0-9]{4}" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition" />
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">소감 한마디 <span class="text-rose-400">*</span></label>
+            <textarea id="entry-comment" required rows="3" placeholder="10,000번 두드려 '언론자유'를 깨운 소감을 자유롭게 남겨주세요." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 resize-none transition"></textarea>
+          </div>
+
+          <div id="entry-error-msg" class="text-rose-400 text-[11px] font-semibold hidden">
+            모든 필수 항목을 올바르게 작성해주세요.
+          </div>
+
+          <button type="submit" id="submit-entry-btn" class="w-full py-3.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-impact rounded-xl text-sm sm:text-base transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
+            <i id="submit-btn-icon" class="fa-solid fa-paper-plane"></i>
+            <span id="submit-btn-text">응모 완료하기</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Success View (응모 완료 후 표시되는 화면) -->
+      <div id="entry-success-container" class="hidden bg-slate-900/90 border border-emerald-500/50 rounded-2xl p-5 mb-4 text-center space-y-3">
+        <div class="w-14 h-14 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center justify-center text-2xl mx-auto shadow-md">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <h4 class="font-impact text-emerald-400 text-lg">응모가 성공적으로 접수되었습니다!</h4>
+        <p class="text-slate-300 text-xs leading-relaxed">
+          남겨주신 소중한 소감과 정보가 정상 전달되었습니다.<br>
+          침묵을 깨뜨리고 '언론자유'를 피워내 주셔서 진심으로 감사드립니다.
+        </p>
+        <div id="submitted-summary" class="bg-slate-800/80 rounded-xl p-3 text-left text-[11px] text-slate-300 space-y-1 border border-slate-700">
+          <!-- Injected via JavaScript -->
+        </div>
+        <button onclick="resetGameToStart()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition border border-slate-700 flex items-center justify-center gap-1.5 active:scale-95 mt-2">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>처음 화면으로 돌아가기</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Audio synthesizer configuration (no external sound file dependencies)
+    let soundEnabled = true;
+    let synth = null;
+    let metalSynth = null;
+    let coinSynth = null;
+
+    function initAudio() {
+      if (!synth && window.Tone) {
+        Tone.start();
+        // Membrane punch synth
+        synth = new Tone.MembraneSynth({
+          pitchDecay: 0.04,
+          octaves: 3,
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.001, decay: 0.12, sustain: 0.01, release: 0.08 }
+        }).toDestination();
+        synth.volume.value = -6;
+
+        // Metal weapon impact synth
+        metalSynth = new Tone.MetalSynth({
+          frequency: 240,
+          envelope: { attack: 0.001, decay: 0.12, release: 0.05 },
+          harmonicity: 3.1,
+          modulationIndex: 14,
+          resonance: 4500,
+          octaves: 1.5
+        }).toDestination();
+        metalSynth.volume.value = -12;
+
+        // Gold coin chime
+        coinSynth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.005, decay: 0.08, sustain: 0.02, release: 0.15 }
+        }).toDestination();
+        coinSynth.volume.value = -12;
+      }
+    }
+
+    function playHitSound(soundType) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (soundType === 'fist') {
+          synth.triggerAttackRelease('C2', '16n');
+        } else if (soundType === 'wood') {
+          synth.triggerAttackRelease('E2', '16n');
+        } else {
+          metalSynth.triggerAttackRelease('16n');
+        }
+      } catch (e) {}
+    }
+
+    function playCoinSound() {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        coinSynth.triggerAttackRelease(['E5', 'B5'], '32n');
+      } catch (e) {}
+    }
+
+    // 10,000 HP (내부 체력)
+    const MAX_HEALTH = 10000;
+
+    // Realistic weapon tech-tree tailored for 10,000 HP (초기 아이콘 스타일 복원)
+    const WEAPONS = [
+      {
+        id: 'fist',
+        name: '단련된 맨손',
+        iconHtml: '<span class="text-3xl select-none">👊</span>',
+        iconClass: 'from-amber-500/20 to-amber-600/10 text-amber-300',
+        soundType: 'fist',
+        price: 0,
+        damage: 1,
+        reward: 1,
+        owned: true,
+        desc: '주인공의 주먹. 1 타격당 1피해, 1원 획득.'
+      },
+      {
+        id: 'wood_stick',
+        name: '나무 막대기',
+        iconHtml: '<span class="text-3xl select-none">🪵</span>',
+        iconClass: 'from-amber-800/30 to-amber-900/20 text-amber-500',
+        soundType: 'wood',
+        price: 20,
+        damage: 2,
+        reward: 2,
+        owned: false,
+        desc: '주변에서 주운 단단한 막대기. 1 타격당 2피해, 2원 획득.'
+      },
+      {
+        id: 'pipe',
+        name: '강철 쇠파이프',
+        iconHtml: '<span class="text-3xl select-none">🦯</span>',
+        iconClass: 'from-slate-700/30 to-slate-800/20 text-slate-200',
+        soundType: 'metal',
+        price: 150,
+        damage: 6,
+        reward: 6,
+        owned: false,
+        desc: '묵직한 냉간 압연 강철 파이프. 1 타격당 6피해, 6원 획득.'
+      },
+      {
+        id: 'iron_hammer',
+        name: '육각 전투 망치',
+        iconHtml: '<span class="text-3xl select-none">🔨</span>',
+        iconClass: 'from-zinc-700/30 to-zinc-900/20 text-amber-400',
+        soundType: 'metal',
+        price: 750,
+        damage: 20,
+        reward: 20,
+        owned: false,
+        desc: '충격을 집중시키는 중형 전투 망치. 1 타격당 20피해, 20원 획득.'
+      },
+      {
+        id: 'sledgehammer',
+        name: '파괴의 골리앗 오함마',
+        iconHtml: '<span class="text-3xl select-none">⚒️</span>',
+        iconClass: 'from-rose-950/30 to-slate-900/20 text-rose-400',
+        soundType: 'metal',
+        price: 2800,
+        damage: 65,
+        reward: 65,
+        owned: false,
+        desc: '알의 표면을 일격에 쪼개버리는 특수 오함마. 1 타격당 65피해, 65원 획득.'
+      }
+    ];
+
+    let gameState = {
+      gold: 0,
+      totalDamage: 0,
+      eggHealth: MAX_HEALTH,
+      currentWeaponId: 'fist',
+      isDestroyed: false
+    };
+
+    const goldDisplay = document.getElementById('gold-display');
+    const shopGoldDisplay = document.getElementById('shop-gold-display');
+    const totalDamageDisplay = document.getElementById('total-damage-display');
+    const eggContainer = document.getElementById('egg-container');
+    const eggElem = document.getElementById('egg');
+    const crackSvg = document.getElementById('crack-svg');
+    const charWrapper = document.getElementById('character-wrapper');
+    const weaponIconElem = document.getElementById('weapon-icon');
+    const equippedNameElem = document.getElementById('equipped-name');
+    const statWeaponBadge = document.getElementById('stat-weapon-badge');
+    const currentDmgElem = document.getElementById('current-dmg');
+    const currentRewardElem = document.getElementById('current-reward');
+    const floatContainer = document.getElementById('float-container');
+    const eggStatusText = document.getElementById('egg-status-text');
+
+    const shopModal = document.getElementById('shop-modal');
+    const openShopBtn = document.getElementById('open-shop-btn');
+    const closeShopBtn = document.getElementById('close-shop-btn');
+    const shopItemsContainer = document.getElementById('shop-items-container');
+
+    const soundBtn = document.getElementById('sound-btn');
+    const soundIcon = document.getElementById('sound-icon');
+    const endingModal = document.getElementById('ending-modal');
+    const endTotalDamage = document.getElementById('end-total-damage');
+    const endTotalGold = document.getElementById('end-total-gold');
+
+    const entryFormContainer = document.getElementById('entry-form-container');
+    const entrySuccessContainer = document.getElementById('entry-success-container');
+    const entryForm = document.getElementById('entry-form');
+    const entryErrorMsg = document.getElementById('entry-error-msg');
+    const submittedSummary = document.getElementById('submitted-summary');
+    const submitBtn = document.getElementById('submit-entry-btn');
+    const submitBtnText = document.getElementById('submit-btn-text');
+    const submitBtnIcon = document.getElementById('submit-btn-icon');
+
+    /* ==========================================================================
+       [구글 스프레드시트 Apps Script 연동 URL]
+       위 가이드에서 배포받은 웹앱 URL을 따옴표 안에 넣어주시면 시트에 자동 저장됩니다!
+       예: const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycb.../exec';
+       ========================================================================== */
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzjkDJi8OcRv8uBG6k5kUzI-Ez0cMsVIVYBms1O9Hiq_CxspkdhhLb_oPY6rrv4sIKdBQ/exec';
+
+    // Submit Application Function
+    window.submitEntry = async function() {
+      const name = document.getElementById('entry-name').value.trim();
+      const org = document.getElementById('entry-org').value.trim();
+      const phone = document.getElementById('entry-phone').value.trim();
+      const comment = document.getElementById('entry-comment').value.trim();
+
+      if (!name || !org || !phone || !comment) {
+        entryErrorMsg.textContent = "모든 필수 항목을 올바르게 작성해주세요.";
+        entryErrorMsg.classList.remove('hidden');
+        return;
+      }
+      entryErrorMsg.classList.add('hidden');
+
+      // 응모 데이터 객체 생성
+      const entryData = {
+        name,
+        org,
+        phone,
+        comment,
+        totalDamage: gameState.totalDamage,
+        submittedAt: new Date().toLocaleString('ko-KR')
+      };
+
+      // 전송 중 UI 버튼 상태 변경
+      submitBtn.disabled = true;
+      submitBtnText.textContent = "응모 데이터 전송 중...";
+      submitBtnIcon.className = "fa-solid fa-spinner fa-spin";
+
+      // 구글 스프레드시트 웹앱으로 전송 시도
+      if (GOOGLE_SCRIPT_URL) {
+        try {
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // 브라우저 CORS 차단 방지
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(entryData)
+          });
+        } catch (err) {
+          console.warn("데이터 전송 중 경고:", err);
+        }
+      }
+
+      // UI 완료 전환
+      submitBtn.disabled = false;
+      submitBtnText.textContent = "응모 완료하기";
+      submitBtnIcon.className = "fa-solid fa-paper-plane";
+
+      submittedSummary.innerHTML = `
+        <div><strong class="text-amber-400">접수일시:</strong> ${entryData.submittedAt}</div>
+        <div><strong class="text-amber-400">성명:</strong> ${escapeHtml(name)} (${escapeHtml(org)})</div>
+        <div><strong class="text-amber-400">연락처:</strong> ${escapeHtml(phone)}</div>
+        <div><strong class="text-amber-400">소감:</strong> "${escapeHtml(comment)}"</div>
+      `;
+
+      playCoinSound();
+      entryFormContainer.classList.add('hidden');
+      entrySuccessContainer.classList.remove('hidden');
+    };
+
+    function escapeHtml(string) {
+      return String(string).replace(/[&<>"']/g, function(s) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[s];
+      });
+    }
+
+    window.resetGameToStart = function() {
+      gameState.eggHealth = MAX_HEALTH;
+      gameState.totalDamage = 0;
+      gameState.gold = 0;
+      gameState.isDestroyed = false;
+      eggElem.style.opacity = '1';
+      eggElem.style.transform = 'scale(1) rotate(0deg)';
+      
+      // 폼 초기화
+      entryForm.reset();
+      entryFormContainer.classList.remove('hidden');
+      entrySuccessContainer.classList.add('hidden');
+      endingModal.classList.add('hidden');
+      updateUI();
+    };
+
+    function getCurrentWeapon() {
+      return WEAPONS.find(w => w.id === gameState.currentWeaponId) || WEAPONS[0];
+    }
+
+    function updateUI() {
+      goldDisplay.textContent = gameState.gold.toLocaleString();
+      shopGoldDisplay.textContent = gameState.gold.toLocaleString();
+      totalDamageDisplay.textContent = gameState.totalDamage.toLocaleString();
+      
+      const currentWeapon = getCurrentWeapon();
+      weaponIconElem.innerHTML = currentWeapon.iconHtml;
+      statWeaponBadge.innerHTML = currentWeapon.iconHtml;
+      equippedNameElem.textContent = currentWeapon.name;
+      currentDmgElem.textContent = currentWeapon.damage;
+      currentRewardElem.textContent = currentWeapon.reward;
+
+      // Qualitative hint depending on damage dealt
+      const damageRatio = (MAX_HEALTH - gameState.eggHealth) / MAX_HEALTH;
+      if (damageRatio >= 0.85) {
+        eggStatusText.textContent = "알 속에서 강한 생명의 박동과 찬란한 빛이 새어나옵니다!";
+        eggStatusText.className = "text-xs text-amber-400 font-bold mt-2 animate-pulse";
+      } else if (damageRatio >= 0.5) {
+        eggStatusText.textContent = "알 표면에 수많은 금이 가며 무엇인가 태동하고 있습니다.";
+        eggStatusText.className = "text-xs text-amber-300 font-medium mt-2";
+      } else if (damageRatio >= 0.2) {
+        eggStatusText.textContent = "알 표면에 미세한 실금이 보이기 시작합니다.";
+        eggStatusText.className = "text-xs text-slate-300 font-medium mt-2";
+      } else {
+        eggStatusText.textContent = "알이 굳게 닫혀있습니다. 무엇이 태어날지 두드려보세요!";
+        eggStatusText.className = "text-xs text-slate-400 font-medium mt-2";
+      }
+
+      renderCracks(damageRatio);
+      renderShop();
+    }
+
+    // Dynamic crack SVG generation
+    function renderCracks(ratio) {
+      if (ratio <= 0.05) {
+        crackSvg.innerHTML = '';
+        return;
+      }
+
+      let paths = '';
+      if (ratio > 0.05) {
+        paths += '<path d="M 100,50 L 95,85 L 115,115" stroke="#5c3a21" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+      }
+      if (ratio > 0.2) {
+        paths += '<path d="M 95,85 L 70,105 L 60,135" stroke="#5c3a21" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        paths += '<path d="M 115,115 L 140,130" stroke="#5c3a21" stroke-width="2" fill="none" stroke-linecap="round"/>';
+      }
+      if (ratio > 0.4) {
+        paths += '<path d="M 60,135 L 75,170 L 65,210" stroke="#4a260f" stroke-width="3" fill="none" stroke-linecap="round"/>';
+        paths += '<path d="M 100,50 L 125,40 L 145,70" stroke="#4a260f" stroke-width="2" fill="none" stroke-linecap="round"/>';
+      }
+      if (ratio > 0.65) {
+        paths += '<path d="M 115,115 L 120,165 L 145,190" stroke="#331908" stroke-width="3" fill="none" stroke-linecap="round"/>';
+        paths += '<path d="M 70,105 L 35,115" stroke="#331908" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+        paths += '<path d="M 120,165 L 105,225" stroke="#331908" stroke-width="3" fill="none" stroke-linecap="round"/>';
+      }
+      if (ratio > 0.85) {
+        paths += '<path d="M 20,90 L 50,100 L 70,105" stroke="#261002" stroke-width="3.5" fill="none" stroke-linecap="round"/>';
+        paths += '<path d="M 140,130 L 175,140 L 185,160" stroke="#261002" stroke-width="3.5" fill="none" stroke-linecap="round"/>';
+        paths += '<path d="M 100,10 L 100,50" stroke="#261002" stroke-width="4" fill="none" stroke-linecap="round"/>';
+      }
+
+      crackSvg.innerHTML = paths;
+    }
+
+    function spawnFloatingText(text, colorClass, offsetRandomX = 0) {
+      const rect = eggElem.getBoundingClientRect();
+      const parentRect = floatContainer.getBoundingClientRect();
+
+      const span = document.createElement('div');
+      span.className = `float-text text-lg sm:text-2xl font-bold ${colorClass}`;
+      span.textContent = text;
+
+      const randomX = (Math.random() - 0.5) * 80 + offsetRandomX;
+      const randomY = (Math.random() - 0.5) * 40;
+
+      const posX = (rect.left - parentRect.left) + rect.width / 2 + randomX - 20;
+      const posY = (rect.top - parentRect.top) + rect.height / 2 + randomY - 20;
+
+      span.style.left = `${posX}px`;
+      span.style.top = `${posY}px`;
+
+      floatContainer.appendChild(span);
+
+      setTimeout(() => {
+        if (span.parentNode) span.parentNode.removeChild(span);
+      }, 750);
+    }
+
+    // Main Attack Routine
+    function attackEgg() {
+      if (gameState.isDestroyed) return;
+
+      const weapon = getCurrentWeapon();
+
+      // 알의 남은 체력을 초과하지 않는 실제 피해량 계산
+      const actualDamage = Math.min(weapon.damage, gameState.eggHealth);
+      gameState.eggHealth = Math.max(0, gameState.eggHealth - actualDamage);
+      gameState.totalDamage += actualDamage; // 장착 무기의 데미지만큼 총 데미지에 가산
+      gameState.gold += weapon.reward;
+
+      playHitSound(weapon.soundType);
+      if (Math.random() > 0.3) playCoinSound();
+
+      // Attacker strike motion
+      charWrapper.classList.remove('attacker-punch');
+      void charWrapper.offsetWidth;
+      charWrapper.classList.add('attacker-punch');
+
+      // Egg deformation
+      eggElem.classList.remove('egg-hit');
+      void eggElem.offsetWidth;
+      eggElem.classList.add('egg-hit');
+      setTimeout(() => eggElem.classList.remove('egg-hit'), 80);
+
+      // Screen shake on heavier impacts
+      if (weapon.damage >= 5) {
+        document.body.classList.remove('shake-screen');
+        void document.body.offsetWidth;
+        document.body.classList.add('shake-screen');
+        setTimeout(() => document.body.classList.remove('shake-screen'), 120);
+      }
+
+      spawnFloatingText(`-${weapon.damage}`, 'text-rose-400', -20);
+      spawnFloatingText(`+${weapon.reward}원`, 'text-amber-400', 30);
+
+      // Check if hatched (10,000 HP depleted)
+      if (gameState.eggHealth <= 0) {
+        triggerEnding();
+      }
+
+      updateUI();
+    }
+
+    // Ending sequence: Freedom of press hatches
+    function triggerEnding() {
+      gameState.isDestroyed = true;
+      eggElem.style.opacity = '0.3';
+      eggElem.style.transform = 'scale(0.85) rotate(8deg)';
+      
+      endTotalDamage.textContent = gameState.totalDamage.toLocaleString() + ' DMG';
+      endTotalGold.textContent = gameState.gold.toLocaleString() + ' 원';
+
+      setTimeout(() => {
+        endingModal.classList.remove('hidden');
+      }, 350);
+    }
+
+    function renderShop() {
+      shopItemsContainer.innerHTML = '';
+
+      WEAPONS.forEach(weapon => {
+        const isCurrentEquipped = gameState.currentWeaponId === weapon.id;
+        const canAfford = gameState.gold >= weapon.price;
+
+        const itemCard = document.createElement('div');
+        itemCard.className = `p-3 rounded-2xl border transition flex items-center justify-between gap-3 ${
+          isCurrentEquipped 
+            ? 'bg-amber-500/15 border-amber-500/60 shadow-md' 
+            : weapon.owned 
+            ? 'bg-slate-800/80 border-slate-700/70 hover:border-slate-600' 
+            : 'bg-slate-800/40 border-slate-800 hover:border-slate-700'
+        }`;
+
+        itemCard.innerHTML = `
+          <div class="flex items-center space-x-3 flex-1 min-w-0">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${weapon.iconClass} border border-slate-600/60 flex items-center justify-center text-2xl shrink-0 shadow-lg">
+              ${weapon.iconHtml}
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center space-x-2">
+                <h3 class="font-bold text-sm text-slate-100 truncate">${weapon.name}</h3>
+                ${isCurrentEquipped ? '<span class="text-[10px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded">장착중</span>' : ''}
+              </div>
+              <p class="text-xs text-slate-400 truncate mt-0.5">${weapon.desc}</p>
+              <div class="text-[11px] font-semibold text-amber-300 mt-0.5">
+                대미지: +${weapon.damage} | 보상: +${weapon.reward}원
+              </div>
+            </div>
+          </div>
+          <div class="shrink-0 text-right">
+            ${
+              isCurrentEquipped
+                ? `<button disabled class="px-3.5 py-2 rounded-xl bg-slate-700/60 text-slate-400 font-bold text-xs cursor-default">장착 완료</button>`
+                : weapon.owned
+                ? `<button onclick="equipWeapon('${weapon.id}')" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold text-xs shadow transition">장착</button>`
+                : `<button onclick="buyWeapon('${weapon.id}')" ${!canAfford ? 'disabled' : ''} class="px-3.5 py-2 rounded-xl font-impact text-xs transition active:scale-95 flex flex-col items-center justify-center min-w-[70px] ${
+                    canAfford 
+                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20' 
+                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                  }">
+                    <span>구매</span>
+                    <span class="text-[10px] opacity-90">${weapon.price.toLocaleString()}원</span>
+                  </button>`
+            }
+          </div>
+        `;
+
+        shopItemsContainer.appendChild(itemCard);
+      });
+    }
+
+    window.buyWeapon = function(weaponId) {
+      const weapon = WEAPONS.find(w => w.id === weaponId);
+      if (!weapon || weapon.owned) return;
+
+      if (gameState.gold >= weapon.price) {
+        gameState.gold -= weapon.price;
+        weapon.owned = true;
+        gameState.currentWeaponId = weapon.id;
+        playCoinSound();
+        updateUI();
+      }
+    };
+
+    window.equipWeapon = function(weaponId) {
+      const weapon = WEAPONS.find(w => w.id === weaponId);
+      if (!weapon || !weapon.owned) return;
+      gameState.currentWeaponId = weapon.id;
+      updateUI();
+    };
+
+    eggContainer.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      attackEgg();
+    });
+
+    // Spacebar attack support
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && shopModal.classList.contains('hidden')) {
+        e.preventDefault();
+        attackEgg();
+      }
+    });
+
+    openShopBtn.addEventListener('click', () => {
+      shopModal.classList.remove('hidden');
+    });
+
+    closeShopBtn.addEventListener('click', () => {
+      shopModal.classList.add('hidden');
+    });
+
+    shopModal.addEventListener('click', (e) => {
+      if (e.target === shopModal) {
+        shopModal.classList.add('hidden');
+      }
+    });
+
+    soundBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      if (soundEnabled) {
+        soundIcon.className = 'fa-solid fa-volume-high text-xs';
+        soundBtn.classList.remove('text-rose-400');
+        initAudio();
+      } else {
+        soundIcon.className = 'fa-solid fa-volume-xmark text-xs text-rose-400';
+      }
+    });
+
+    // Initialization
+    window.onload = function() {
+      updateUI();
+    };
+  </script>
+</body>
+</html>
