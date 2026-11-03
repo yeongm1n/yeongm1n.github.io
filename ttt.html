@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>언노타자연습</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #c0c0c0;
+            font-family: 'Gulim', 'Dotum', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .window {
+            background-color: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #000000;
+            border-bottom: 2px solid #000000;
+            box-shadow: inset -1px -1px 0px #808080, inset 1px 1px 0px #dfdfdf;
+        }
+
+        .title-bar {
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: white;
+            padding: 2px 4px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-bar-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .title-bar-close {
+            background-color: #c0c0c0;
+            border-top: 1px solid #ffffff;
+            border-left: 1px solid #ffffff;
+            border-right: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+            color: black;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .title-bar-close:active {
+            border-top: 1px solid #000000;
+            border-left: 1px solid #000000;
+            border-right: 1px solid #ffffff;
+            border-bottom: 1px solid #ffffff;
+        }
+
+        .sunken-panel {
+            background-color: #ffffff;
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+        }
+
+        .retro-button {
+            background-color: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #000000;
+            border-bottom: 2px solid #000000;
+            padding: 4px 12px;
+            cursor: pointer;
+        }
+        
+        .retro-button:active {
+            border-top: 2px solid #000000;
+            border-left: 2px solid #000000;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            padding: 5px 11px 3px 13px;
+        }
+
+        .retro-input {
+            width: 100%;
+            background-color: transparent;
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
+            caret-color: black;
+        }
+
+        .list-item {
+            cursor: pointer;
+            padding: 2px 4px;
+            text-align: center;
+        }
+        .list-item:hover, .list-item.selected {
+            background-color: #000080;
+            color: white;
+        }
+
+        .status-bar {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 24px;
+            border-top: 1px solid #ffffff;
+            background-color: #c0c0c0;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            font-size: 12px;
+        }
+
+        .typing-line {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        
+        .prompt-text {
+            color: #000;
+            white-space: pre-wrap;
+        }
+        
+        .input-wrapper {
+            position: relative;
+            display: flex;
+        }
+
+        .incorrect-char {
+            color: red;
+            background-color: #ffcccc;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative">
+
+    <!-- 최상단 메뉴바 흉내 -->
+    <div class="absolute top-0 left-0 w-full h-8 flex items-center px-2 bg-[#c0c0c0] border-b-2 border-white" style="box-shadow: 0 1px 0 #808080;">
+        <span class="font-bold mr-4">⌨ 언노타자연습</span>
+        <div class="flex gap-4 text-sm">
+            <span class="cursor-pointer hover:bg-gray-300 px-1">글연습</span>
+            <span class="cursor-pointer hover:bg-gray-300 px-1" onclick="showScreen('rankScreen')">순위</span>
+        </div>
+    </div>
+
+    <!-- 앱 컨테이너 -->
+    <div id="appContainer" class="w-full max-w-3xl">
+        
+        <!-- 1. 메인 화면 (목록 선택) -->
+        <div id="mainScreen" class="window mx-auto w-[400px]">
+            <div class="title-bar">
+                <div class="title-bar-text"><span>⌨ 타자 검정</span></div>
+                <div class="title-bar-close">X</div>
+            </div>
+            <div class="p-4">
+                <div class="text-center mb-2">── 글 ──</div>
+                <div id="textListContainer" class="sunken-panel h-48 overflow-y-auto mb-4 bg-white flex flex-col py-2">
+                    <!-- 자바스크립트로 목록이 자동 생성됩니다 -->
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div class="sunken-panel px-2 py-1 text-sm text-gray-600 flex-grow mr-2">
+                        연습하고자하는 글을 선택하세요
+                    </div>
+                    <button class="retro-button" onclick="startPractice()">시작</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 연습 화면 -->
+        <div id="practiceScreen" class="window mx-auto w-full max-w-2xl hidden">
+            <div class="title-bar">
+                <div class="title-bar-text"><span id="practiceTitle">⌨ 타자 검정</span></div>
+                <div class="title-bar-close" onclick="showScreen('mainScreen')">X</div>
+            </div>
+            <div class="p-6 bg-[#c0c0c0]">
+                <h2 id="practiceHeader" class="font-bold text-lg mb-6">제목</h2>
+                
+                <div id="linesContainer" class="h-64 flex flex-col justify-start">
+                    <!-- 자바스크립트로 라인들이 주입됨 -->
+                </div>
+
+                <div class="flex justify-between items-center border-2 border-gray-400 p-2 mt-4">
+                    <div class="flex items-center gap-2">
+                        <span>현재 타수:</span>
+                        <span id="currentWpm" class="bg-black text-white font-mono px-2 py-1">0</span>
+                        <span>타/분</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>진행도:</span>
+                        <div class="w-32 h-4 bg-white border border-gray-500 relative">
+                            <div id="progressBar" class="h-full bg-red-600 w-0"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 결과 및 응모 화면 -->
+        <div id="resultScreen" class="window mx-auto w-[400px] hidden">
+            <div class="title-bar">
+                <div class="title-bar-text"><span>결과 및 이벤트 응모</span></div>
+                <div class="title-bar-close" onclick="showScreen('mainScreen')">X</div>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <h2 class="text-xl font-bold mb-2">타자 연습 완료!</h2>
+                    <p class="text-lg">평균 타수: <span id="finalWpm" class="font-bold text-blue-700">0</span> 타</p>
+                    <p class="text-lg">정확도: <span id="finalAccuracy" class="font-bold text-blue-700">0</span>%</p>
+                </div>
+
+                <div class="sunken-panel p-4 bg-white">
+                    <h3 class="font-bold mb-4 border-b pb-1 text-center">🎉 이벤트 응모 🎉</h3>
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-center">
+                            <label class="w-24">이름:</label>
+                            <input type="text" id="submitName" class="border border-gray-400 p-1 flex-grow">
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-24">전화번호:</label>
+                            <input type="text" id="submitPhone" placeholder="010-0000-0000" class="border border-gray-400 p-1 flex-grow">
+                        </div>
+                        <div class="flex items-center">
+                            <label class="w-24">소속지부:</label>
+                            <input type="text" id="submitBranch" class="border border-gray-400 p-1 flex-grow">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 mt-6">
+                    <button class="retro-button" onclick="submitResult()">응모하기</button>
+                    <button class="retro-button" onclick="showScreen('mainScreen')">처음으로</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 순위 화면 -->
+        <div id="rankScreen" class="window mx-auto w-[350px] hidden">
+            <div class="title-bar">
+                <div class="title-bar-text"><span>명예의 전당</span></div>
+                <div class="title-bar-close" onclick="showScreen('mainScreen')">X</div>
+            </div>
+            <div class="p-4">
+                <table class="w-full text-center border-collapse">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="py-1">순위</th>
+                            <th class="py-1">이름</th>
+                            <th class="py-1">소속지부</th>
+                            <th class="py-1">타수</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankBody">
+                        <!-- 서버 데이터가 여기에 표시됩니다 -->
+                        <tr><td colspan="4" class="py-4 text-center text-gray-600">순위 데이터를 불러오는 중입니다...</td></tr>
+                    </tbody>
+                </table>
+                <div class="flex justify-center mt-6 gap-4">
+                    <button class="retro-button" onclick="showScreen('mainScreen')">닫기</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="status-bar">
+        <span id="statusMessage">상하 화살표로 항목을 선택한 후 Enter를 누르세요. 마우스로도 선택 가능합니다.</span>
+    </div>
+
+    <script>
+        // 💡 이곳에 새로운 글을 계속 추가할 수 있습니다!
+        const textsData = [
+            {
+                title: "방미통위는 흔들리지 말고 즉각 YTN 정상화 결단하라",
+                lines: [
+                    "보도전문채널 YTN은 사장도 보도국장도 없이 망가지고 있다. 유진 때문이다.",
+                    "새 방송법이 사장추천위원회 도입을 규정했지만 유진은 법 취지를 왜곡하며 사추위 도입을 가로막고 있다.",
+                    "공정보도를 위한 보도국장 임면동의제도 유진은 멋대로 없앴다가 법원에서 불법행위라는 심판을 받은 바 있다.",
+                    "과거 준공영 보도전문채널로 국민의 신뢰를 받았던 YTN을 일개 자본의 사익 때문에 이렇게 방치해서는 안 된다.",
+                    "시간이 없다. 방미통위는 좌고우면하지 말고 즉각 YTN 정상화를 결단하라."
+                ]
+            },
+            // 아래처럼 쉼표(,)를 찍고 새로운 글 객체를 추가하시면 됩니다.
+            {
+                title: "별 헤는 밤",
+                lines: [
+                    "계절이 지나가는 하늘에는 가을로 가득 차 있습니다.",
+                    "나는 아무 걱정도 없이 가을 속의 별들을 다 헤일 듯합니다.",
+                    "가슴 속에 하나 둘 새겨지는 별을 이제 다 못 헤는 것은",
+                    "쉬이 아침이 오는 까닭이요, 내일 밤이 남은 까닭이요,",
+                    "아직 나의 청춘이 다하지 않은 까닭입니다."
+                ]
+            }
+        ];
+
+        let selectedIndex = 0;
+        let currentTextObj = null;
+        let currentLineIndex = 0;
+        let startTime = 0;
+        let totalTypedChars = 0; 
+        let totalCorrectChars = 0;
+        let lineInputs = [];
+
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/library/d/12xELkp5F7JWH5mAbGrM746C2WsX-DLYWji_1b1c022rIeFK5tbNd-kwl/2';
+
+        function initTextList() {
+            const container = document.getElementById('textListContainer');
+            container.innerHTML = '';
+            textsData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `list-item ${index === selectedIndex ? 'selected' : ''}`;
+                div.onclick = function() { selectText(index, this); };
+                div.innerText = item.title;
+                container.appendChild(div);
+            });
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.window').forEach(el => el.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+            
+            if (screenId === 'mainScreen') {
+                document.getElementById('statusMessage').innerText = "상하 화살표로 항목을 선택한 후 Enter를 누르세요. 마우스로도 선택 가능합니다.";
+            } else if (screenId === 'practiceScreen') {
+                document.getElementById('statusMessage').innerText = "내용을 입력하고 Enter를 누르면 다음 줄로 넘어갑니다.";
+            } else if (screenId === 'resultScreen') {
+                document.getElementById('statusMessage').innerText = "이벤트에 응모하여 상품을 받아가세요!";
+            } else if (screenId === 'rankScreen') {
+                document.getElementById('statusMessage').innerText = "순위를 불러오는 중입니다...";
+                loadRankings(); // 순위 창 열 때 데이터 동기화
+            }
+        }
+
+        function loadRankings() {
+            if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/library/d/12xELkp5F7JWH5mAbGrM746C2WsX-DLYWji_1b1c022rIeFK5tbNd-kwl/2') {
+                document.getElementById('statusMessage').innerText = "순위 연동 URL이 설정되지 않았습니다.";
+                return;
+            }
+
+            const tbody = document.getElementById('rankBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center">서버에서 순위를 가져오는 중...</td></tr>';
+
+            fetch(GOOGLE_SCRIPT_URL)
+                .then(response => response.json())
+                .then(data => {
+                    tbody.innerHTML = '';
+                    if(data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center">아직 등록된 기록이 없습니다.</td></tr>';
+                        return;
+                    }
+                    
+                    data.forEach((row, index) => {
+                        const tr = document.createElement('tr');
+                        // 1, 2, 3위는 색상 다르게 표시
+                        let rankStyle = "";
+                        if (index === 0) rankStyle = "text-red-600 font-bold";
+                        else if (index === 1) rankStyle = "text-orange-500 font-bold";
+                        else if (index === 2) rankStyle = "text-blue-500 font-bold";
+
+                        tr.innerHTML = `
+                            <td class="py-1 ${rankStyle}">${index + 1}</td>
+                            <td>${row.name}</td>
+                            <td>${row.branch}</td>
+                            <td class="font-bold">${row.wpm}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    document.getElementById('statusMessage').innerText = "명예의 전당 순위를 성공적으로 불러왔습니다.";
+                })
+                .catch(err => {
+                    console.error('순위 불러오기 실패:', err);
+                    tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-red-600">데이터를 불러오는데 실패했습니다.</td></tr>';
+                    document.getElementById('statusMessage').innerText = "순위 데이터를 가져오지 못했습니다.";
+                });
+        }
+
+        function selectText(index, element) {
+            selectedIndex = index;
+            document.querySelectorAll('.list-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        initTextList();
+
+        function startPractice() {
+            currentTextObj = textsData[selectedIndex];
+            currentLineIndex = 0;
+            totalTypedChars = 0;
+            totalCorrectChars = 0;
+            lineInputs = new Array(currentTextObj.lines.length).fill("");
+            
+            document.getElementById('practiceTitle').innerText = `⌨ 타자 검정 - ${currentTextObj.title}`;
+            document.getElementById('practiceHeader').innerText = currentTextObj.title;
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('currentWpm').innerText = '0';
+            
+            renderLines();
+            showScreen('practiceScreen');
+            startTime = Date.now();
+            
+            setTimeout(() => {
+                const firstInput = document.getElementById('input-0');
+                if(firstInput) firstInput.focus();
+            }, 100);
+        }
+
+        function renderLines() {
+            const container = document.getElementById('linesContainer');
+            container.innerHTML = '';
+
+            const start = Math.max(0, currentLineIndex - 1);
+            const end = Math.min(currentTextObj.lines.length, start + 3);
+
+            for (let i = start; i < end; i++) {
+                const targetText = currentTextObj.lines[i];
+                const isCurrent = i === currentLineIndex;
+                const isPast = i < currentLineIndex;
+                
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'typing-line';
+
+                const promptDiv = document.createElement('div');
+                promptDiv.className = 'prompt-text font-mono';
+                
+                if (isPast) {
+                    promptDiv.innerHTML = targetText; 
+                } else {
+                    promptDiv.innerHTML = targetText;
+                }
+                lineDiv.appendChild(promptDiv);
+
+                const inputWrapper = document.createElement('div');
+                inputWrapper.className = 'input-wrapper font-mono bg-white px-1';
+                
+                if (isCurrent) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = `input-${i}`;
+                    input.className = 'retro-input';
+                    input.value = lineInputs[i] || "";
+                    input.autocomplete = "off";
+                    input.spellcheck = false;
+                    
+                    input.addEventListener('input', (e) => {
+                        lineInputs[i] = e.target.value;
+                        updateLiveStats(e.target.value, targetText);
+                    });
+
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (input.value === targetText) {
+                                finishLine(i, input.value, targetText);
+                            } else {
+                                input.style.backgroundColor = '#ffcccc';
+                                setTimeout(() => {
+                                    input.style.backgroundColor = 'transparent';
+                                }, 300);
+                            }
+                        }
+                    });
+                    
+                    inputWrapper.appendChild(input);
+                } else if (isPast) {
+                    const span = document.createElement('span');
+                    span.innerText = lineInputs[i];
+                    inputWrapper.appendChild(span);
+                    inputWrapper.classList.add('bg-gray-200');
+                }
+
+                lineDiv.appendChild(inputWrapper);
+                container.appendChild(lineDiv);
+            }
+        }
+
+        function updateLiveStats(typed, target) {
+            const elapsedMinutes = (Date.now() - startTime) / 60000;
+            if (elapsedMinutes > 0) {
+                const currentStrokeCount = (totalTypedChars + typed.length) * 2.5;
+                let wpm = Math.floor(currentStrokeCount / elapsedMinutes);
+                if (wpm > 2000) wpm = 2000;
+                document.getElementById('currentWpm').innerText = isNaN(wpm) ? 0 : wpm;
+            }
+        }
+
+        function finishLine(index, typedStr, targetStr) {
+            totalTypedChars += typedStr.length;
+            
+            let correctCount = 0;
+            const minLen = Math.min(typedStr.length, targetStr.length);
+            for(let i=0; i<minLen; i++) {
+                if(typedStr[i] === targetStr[i]) correctCount++;
+            }
+            totalCorrectChars += correctCount;
+
+            currentLineIndex++;
+            
+            const progress = (currentLineIndex / currentTextObj.lines.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+
+            if (currentLineIndex >= currentTextObj.lines.length) {
+                showResult();
+            } else {
+                renderLines();
+                setTimeout(() => {
+                    const nextInput = document.getElementById(`input-${currentLineIndex}`);
+                    if(nextInput) nextInput.focus();
+                }, 50);
+            }
+        }
+
+        function showResult() {
+            const elapsedMinutes = (Date.now() - startTime) / 60000;
+            const totalStrokes = totalTypedChars * 2.5;
+            const finalWpm = Math.floor(totalStrokes / elapsedMinutes);
+            
+            const totalTargetChars = currentTextObj.lines.join("").length;
+            const accuracy = totalTargetChars === 0 ? 0 : Math.floor((totalCorrectChars / totalTargetChars) * 100);
+
+            document.getElementById('finalWpm').innerText = finalWpm > 0 ? finalWpm : 0;
+            document.getElementById('finalAccuracy').innerText = accuracy > 100 ? 100 : accuracy;
+            
+            showScreen('resultScreen');
+        }
+
+        function submitResult() {
+            const name = document.getElementById('submitName').value;
+            const phone = document.getElementById('submitPhone').value;
+            const branch = document.getElementById('submitBranch').value;
+            const wpm = document.getElementById('finalWpm').innerText;
+
+            if(!name || !phone || !branch) {
+                alertCustom("모든 정보를 입력해주세요!");
+                return;
+            }
+
+            if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/library/d/12xELkp5F7JWH5mAbGrM746C2WsX-DLYWji_1b1c022rIeFK5tbNd-kwl/2') {
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        name: name,
+                        phone: phone,
+                        branch: branch,
+                        wpm: wpm
+                    })
+                }).catch(err => console.error('시트 전송 실패:', err));
+            }
+
+            alertCustom("이벤트 응모가 완료되었습니다!", () => {
+                showScreen('mainScreen');
+            });
+        }
+
+        function alertCustom(message, callback) {
+            const modal = document.createElement('div');
+            modal.id = 'customAlertModal';
+            modal.className = 'absolute top-0 left-0 w-full h-full flex items-center justify-center z-50';
+            
+            const alertBox = document.createElement('div');
+            alertBox.className = 'window w-[250px] shadow-xl';
+            alertBox.innerHTML = `
+                <div class="title-bar">
+                    <div class="title-bar-text"><span>알림</span></div>
+                    <div class="title-bar-close" id="alertCloseBtn">X</div>
+                </div>
+                <div class="p-6 bg-[#c0c0c0] text-center">
+                    <p class="mb-6 text-sm whitespace-pre-wrap">${message}</p>
+                    <button class="retro-button px-6" id="alertOkBtn">확인</button>
+                </div>
+            `;
+            modal.appendChild(alertBox);
+            document.body.appendChild(modal);
+
+            const closeAlert = () => {
+                if (document.body.contains(modal)) {
+                    document.body.removeChild(modal);
+                    if (callback) callback();
+                }
+            };
+
+            document.getElementById('alertOkBtn').onclick = closeAlert;
+            document.getElementById('alertCloseBtn').onclick = closeAlert;
+
+            const handleKey = (e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.removeEventListener('keydown', handleKey, true);
+                    closeAlert();
+                }
+            };
+            
+            document.addEventListener('keydown', handleKey, true);
+            setTimeout(() => document.getElementById('alertOkBtn').focus(), 50);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('customAlertModal')) return;
+
+            if (!document.getElementById('mainScreen').classList.contains('hidden')) {
+                if (e.key === 'ArrowDown') {
+                    selectedIndex = (selectedIndex + 1) % textsData.length;
+                    document.querySelectorAll('.list-item')[selectedIndex].click();
+                } else if (e.key === 'ArrowUp') {
+                    selectedIndex = (selectedIndex - 1 + textsData.length) % textsData.length;
+                    document.querySelectorAll('.list-item')[selectedIndex].click();
+                } else if (e.key === 'Enter') {
+                    startPractice();
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
