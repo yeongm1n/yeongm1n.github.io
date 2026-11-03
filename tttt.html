@@ -147,7 +147,7 @@
 
     <!-- 최상단 메뉴바 흉내 -->
     <div class="absolute top-0 left-0 w-full h-8 flex items-center px-2 bg-[#c0c0c0] border-b-2 border-white" style="box-shadow: 0 1px 0 #808080;">
-        <span class="font-bold mr-4">⌨ 언노타자연습</span>
+        <span class="font-bold mr-4">⌨ </span>
         <div class="flex gap-4 text-sm">
             <span class="cursor-pointer hover:bg-gray-300 px-1" onclick="showScreen('mainScreen')">글연습</span>
             <span class="cursor-pointer hover:bg-gray-300 px-1" onclick="showScreen('rankScreen')">순위</span>
@@ -283,7 +283,7 @@
         const textsData = [
             {
                 title: "방미통위는 흔들리지 말고 즉각 YTN 정상화 결단하라",
-                lines: [,
+                lines: [
                     "보도전문채널 YTN은 사장도 보도국장도 없이 망가지고 있다. 유진 때문이다.",
                     "새 방송법이 사장추천위원회 도입을 규정했지만 유진은 법 취지를 왜곡하며 사추위 도입을 가로막고 있다.",
                     "공정보도를 위한 보도국장 임면동의제도 유진은 멋대로 없앴다가 법원에서 불법행위라는 심판을 받은 바 있다.",
@@ -308,7 +308,7 @@
         let currentTextObj = null;
         let currentLineIndex = 0;
         let startTime = 0;
-        let totalTypedChars = 0; 
+        let totalTypedChars = 0;
         let totalCorrectChars = 0;
         let lineInputs = []; 
 
@@ -326,24 +326,8 @@
             });
         }
 
-        function showScreen(screenId) {
-            document.querySelectorAll('.window').forEach(el => el.classList.add('hidden'));
-            document.getElementById(screenId).classList.remove('hidden');
-            
-            if (screenId === 'mainScreen') {
-                document.getElementById('statusMessage').innerText = "상하 화살표로 항목을 선택한 후 Enter를 누르세요. 마우스로도 선택 가능합니다.";
-            } else if (screenId === 'practiceScreen') {
-                document.getElementById('statusMessage').innerText = "내용을 입력하고 Enter를 누르면 다음 줄로 넘어갑니다.";
-            } else if (screenId === 'resultScreen') {
-                document.getElementById('statusMessage').innerText = "이벤트에 응모하여 상품을 받아가세요!";
-            } else if (screenId === 'rankScreen') {
-                document.getElementById('statusMessage').innerText = "순위를 불러오는 중입니다...";
-                loadRankings();
-            }
-        }
-
         function loadRankings() {
-            if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbyWB7wvWcXaE3ImaFY-JyfiBf63_aIMuGCM8iAeGIjTAms-a1ZXePunVtM3obPmLAdAyw/exec') {
+            if (!GOOGLE_SCRIPT_URL) {
                 document.getElementById('statusMessage').innerText = "순위 연동 URL이 설정되지 않았습니다.";
                 return;
             }
@@ -546,7 +530,7 @@
                 return;
             }
 
-            if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbyWB7wvWcXaE3ImaFY-JyfiBf63_aIMuGCM8iAeGIjTAms-a1ZXePunVtM3obPmLAdAyw/exec') {
+            if (GOOGLE_SCRIPT_URL) {
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
