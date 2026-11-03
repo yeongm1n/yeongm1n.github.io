@@ -312,7 +312,7 @@
         let totalCorrectChars = 0;
         let lineInputs = []; 
 
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwHuwv4UHVSY1rLsLSElWPSatOZFdkPUr8N7FqbqeEMCIvwEMORK8EZwd2SOSpPoHzQ/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7T8XPlwADGFh3PHRVu7-siqbw0RxF_Q3C76NL3fV0e1NnYpuSwpH-nqSWpZkVInLd/exec';
 
         function initTextList() {
             const container = document.getElementById('textListContainer');
@@ -343,7 +343,7 @@
         }
 
         function loadRankings() {
-            if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwHuwv4UHVSY1rLsLSElWPSatOZFdkPUr8N7FqbqeEMCIvwEMORK8EZwd2SOSpPoHzQ/exec') {
+            if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbw7T8XPlwADGFh3PHRVu7-siqbw0RxF_Q3C76NL3fV0e1NnYpuSwpH-nqSWpZkVInLd/exec') {
                 document.getElementById('statusMessage').innerText = "순위 연동 URL이 설정되지 않았습니다.";
                 return;
             }
@@ -546,7 +546,7 @@
                 return;
             }
 
-            if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwHuwv4UHVSY1rLsLSElWPSatOZFdkPUr8N7FqbqeEMCIvwEMORK8EZwd2SOSpPoHzQ/exec') {
+            if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbw7T8XPlwADGFh3PHRVu7-siqbw0RxF_Q3C76NL3fV0e1NnYpuSwpH-nqSWpZkVInLd/exec') {
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
