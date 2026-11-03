@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>언노타자연습</title>
+    <title>언론노조 창립기념 타자대회</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -149,7 +149,7 @@
     <div class="absolute top-0 left-0 w-full h-8 flex items-center px-2 bg-[#c0c0c0] border-b-2 border-white" style="box-shadow: 0 1px 0 #808080;">
         <span class="font-bold mr-4">⌨ 언노타자연습</span>
         <div class="flex gap-4 text-sm">
-            <span class="cursor-pointer hover:bg-gray-300 px-1">글연습</span>
+            <span class="cursor-pointer hover:bg-gray-300 px-1" onclick="showScreen('mainScreen')">글연습</span>
             <span class="cursor-pointer hover:bg-gray-300 px-1" onclick="showScreen('rankScreen')">순위</span>
         </div>
     </div>
@@ -283,7 +283,7 @@
         const textsData = [
             {
                 title: "방미통위는 흔들리지 말고 즉각 YTN 정상화 결단하라",
-                lines: [
+                lines: [,
                     "보도전문채널 YTN은 사장도 보도국장도 없이 망가지고 있다. 유진 때문이다.",
                     "새 방송법이 사장추천위원회 도입을 규정했지만 유진은 법 취지를 왜곡하며 사추위 도입을 가로막고 있다.",
                     "공정보도를 위한 보도국장 임면동의제도 유진은 멋대로 없앴다가 법원에서 불법행위라는 심판을 받은 바 있다.",
@@ -310,9 +310,9 @@
         let startTime = 0;
         let totalTypedChars = 0; 
         let totalCorrectChars = 0;
-        let lineInputs = [];
+        let lineInputs = []; 
 
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/library/d/12xELkp5F7JWH5mAbGrM746C2WsX-DLYWji_1b1c022rIeFK5tbNd-kwl/2';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwHuwv4UHVSY1rLsLSElWPSatOZFdkPUr8N7FqbqeEMCIvwEMORK8EZwd2SOSpPoHzQ/exec';
 
         function initTextList() {
             const container = document.getElementById('textListContainer');
@@ -338,12 +338,12 @@
                 document.getElementById('statusMessage').innerText = "이벤트에 응모하여 상품을 받아가세요!";
             } else if (screenId === 'rankScreen') {
                 document.getElementById('statusMessage').innerText = "순위를 불러오는 중입니다...";
-                loadRankings(); // 순위 창 열 때 데이터 동기화
+                loadRankings();
             }
         }
 
         function loadRankings() {
-            if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/library/d/12xELkp5F7JWH5mAbGrM746C2WsX-DLYWji_1b1c022rIeFK5tbNd-kwl/2') {
+            if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwHuwv4UHVSY1rLsLSElWPSatOZFdkPUr8N7FqbqeEMCIvwEMORK8EZwd2SOSpPoHzQ/exec') {
                 document.getElementById('statusMessage').innerText = "순위 연동 URL이 설정되지 않았습니다.";
                 return;
             }
@@ -351,7 +351,9 @@
             const tbody = document.getElementById('rankBody');
             tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center">서버에서 순위를 가져오는 중...</td></tr>';
 
-            fetch(GOOGLE_SCRIPT_URL)
+            const fetchUrl = GOOGLE_SCRIPT_URL + "?t=" + new Date().getTime();
+
+            fetch(fetchUrl)
                 .then(response => response.json())
                 .then(data => {
                     tbody.innerHTML = '';
@@ -362,7 +364,6 @@
                     
                     data.forEach((row, index) => {
                         const tr = document.createElement('tr');
-                        // 1, 2, 3위는 색상 다르게 표시
                         let rankStyle = "";
                         if (index === 0) rankStyle = "text-red-600 font-bold";
                         else if (index === 1) rankStyle = "text-orange-500 font-bold";
@@ -434,7 +435,7 @@
                 promptDiv.className = 'prompt-text font-mono';
                 
                 if (isPast) {
-                    promptDiv.innerHTML = targetText; 
+                    promptDiv.innerHTML = targetText;
                 } else {
                     promptDiv.innerHTML = targetText;
                 }
@@ -545,9 +546,10 @@
                 return;
             }
 
-            if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/library/d/12xELkp5F7JWH5mAbGrM746C2WsX-DLYWji_1b1c022rIeFK5tbNd-kwl/2') {
+            if (GOOGLE_SCRIPT_URL !== 'https://script.google.com/macros/s/AKfycbwHuwv4UHVSY1rLsLSElWPSatOZFdkPUr8N7FqbqeEMCIvwEMORK8EZwd2SOSpPoHzQ/exec') {
                 fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
+                    mode: 'no-cors',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
                         name: name,
