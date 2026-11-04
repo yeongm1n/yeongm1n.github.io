@@ -522,6 +522,14 @@
                     input.value = lineInputs[i] || "";
                     input.autocomplete = "off";
                     input.spellcheck = false;
+
+                    input.addEventListener('paste', (e) => {
+                        e.preventDefault();
+                        input.style.backgroundColor = '#ffcccc';
+                        setTimeout(() => input.style.backgroundColor = 'transparent', 300);
+                    });
+                    input.addEventListener('drop', (e) => {
+                        e.preventDefault();
                     
                     input.addEventListener('input', (e) => {
                         lineInputs[i] = e.target.value;
