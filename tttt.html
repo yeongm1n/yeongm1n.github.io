@@ -396,9 +396,13 @@
         }
 
         function showScreen(screenId) {
-            document.querySelectorAll('#appContainer .window').forEach(el => el.classList.add('hidden'));
-            document.getElementById(screenId).classList.remove('hidden');
+            document.getElementById('mainScreen').classList.add('hidden');
+            document.getElementById('practiceScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('rankScreen').classList.add('hidden');
             
+            document.getElementById(screenId).classList.remove('hidden');
+
             if (screenId === 'mainScreen') {
                 document.getElementById('statusMessage').innerText = "상하 화살표로 항목을 선택한 후 Enter를 누르세요. 마우스로도 선택 가능합니다.";
             } else if (screenId === 'practiceScreen') {
