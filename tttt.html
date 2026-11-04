@@ -396,7 +396,7 @@
         }
 
         function showScreen(screenId) {
-            document.querySelectorAll('.window').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('#appContainer .window').forEach(el => el.classList.add('hidden'));
             document.getElementById(screenId).classList.remove('hidden');
             
             if (screenId === 'mainScreen') {
