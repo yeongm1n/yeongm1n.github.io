@@ -621,6 +621,7 @@
         }
 
         function showResult() {
+            const elapsedMs = Date.now() - startTime;
             const elapsedMinutes = (Date.now() - startTime) / 60000;
             const totalStrokes = totalTypedChars * 2.5;
             const finalWpm = Math.floor(totalStrokes / elapsedMinutes);
